@@ -2,6 +2,7 @@ import StatCard from '../components/dashboard/StatCard'
 import NeedsAttentionPanel from '../components/dashboard/NeedsAttentionPanel'
 import SmartInsightsPanel from '../components/dashboard/SmartInsightsPanel'
 import PlansEndingSoonPanel from '../components/dashboard/PlansEndingSoonPanel'
+import CalendarPanel from '../components/dashboard/CalendarPanel'
 import { Users, TrendingUp, AlertCircle, Calendar } from 'lucide-react'
 import './Dashboard.css'
 
@@ -71,6 +72,7 @@ export default function Dashboard() {
           <SmartInsightsPanel />
         </div>
         <div className="panels-right">
+          <CalendarPanel />
           <PlansEndingSoonPanel />
         </div>
       </div>
