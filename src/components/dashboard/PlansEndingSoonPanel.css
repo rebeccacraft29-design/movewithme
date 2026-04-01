@@ -1,0 +1,159 @@
+.plans-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s ease;
+}
+
+.plan-item:hover {
+  background: var(--surface-raised);
+}
+
+.plan-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.plan-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.plan-client-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.plan-days-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+
+.plan-name {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+
+.plan-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-track {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+.progress-pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 28px;
+  text-align: right;
+}
+
+.plan-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.plan-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.plan-btn--renew {
+  color: var(--teal);
+}
+
+.plan-btn--renew:hover {
+  background: rgba(46, 196, 160, 0.1);
+  border-color: rgba(46, 196, 160, 0.3);
+}
+
+.plan-btn--view {
+  color: var(--text-secondary);
+}
+
+.plan-btn--view:hover {
+  background: var(--navy-lighter);
+  color: var(--text-primary);
+}
+
+.panel-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.panel-footer-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px;
+  background: linear-gradient(135deg, rgba(255,107,91,0.08), rgba(255,167,51,0.08));
+  border: 1px solid rgba(255,107,91,0.2);
+  border-radius: 9px;
+  color: var(--coral-light);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.panel-footer-btn:hover {
+  background: linear-gradient(135deg, rgba(255,107,91,0.15), rgba(255,167,51,0.15));
+  border-color: rgba(255,107,91,0.35);
+}
