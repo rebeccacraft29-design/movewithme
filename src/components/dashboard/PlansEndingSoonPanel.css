@@ -157,3 +157,10 @@
   background: linear-gradient(135deg, rgba(255,107,91,0.15), rgba(255,167,51,0.15));
   border-color: rgba(255,107,91,0.35);
 }
+
+
+@media (max-width: 768px) {
+  .plan-item { padding: 14px 14px; min-height: 60px; }
+  .plan-btn { min-height: 44px; padding: 6px 12px; }
+  .panel-footer-btn { min-height: 44px; }
+}

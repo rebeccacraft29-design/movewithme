@@ -6,11 +6,12 @@ const accentColors = {
   teal:  { bg: 'rgba(46,196,160,0.12)', icon: '#2EC4A0', glow: 'rgba(46,196,160,0.2)' },
 }
 
-export default function StatCard({ label, value, delta, deltaPositive, icon: Icon, accent }) {
+export default function StatCard({ label, value, delta, deltaPositive, icon: Icon, accent, onClick }) {
   const colors = accentColors[accent] || accentColors.coral
+  const Tag = onClick ? 'button' : 'div'
 
   return (
-    <div className="stat-card">
+    <Tag className={`stat-card${onClick ? ' stat-card--clickable' : ''}`} onClick={onClick}>
       <div className="stat-card-top">
         <div
           className="stat-icon"
@@ -30,6 +31,6 @@ export default function StatCard({ label, value, delta, deltaPositive, icon: Ico
           {delta}
         </p>
       )}
-    </div>
+    </Tag>
   )
 }

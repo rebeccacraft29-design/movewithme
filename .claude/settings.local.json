@@ -7,7 +7,8 @@
       "Bash(npm init:*)",
       "Bash(npm install:*)",
       "Bash(npm run:*)",
-      "Bash(ls /Users/rebeccacraft/movewithme/.env*)"
+      "Bash(ls /Users/rebeccacraft/movewithme/.env*)",
+      "Bash(grep -oP '--[^\\)]+')"
     ]
   }
 }

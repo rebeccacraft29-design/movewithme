@@ -1,58 +1,8 @@
 import { AlertCircle, MessageSquare, RefreshCw, ChevronRight } from 'lucide-react'
+import { getClientsNeedingAttention } from '../../data/mockData'
 import './NeedsAttentionPanel.css'
 
-const clients = [
-  {
-    id: 1,
-    name: 'Sarah Mitchell',
-    initials: 'SM',
-    issue: 'Missed 3 workouts this week',
-    tag: 'Overdue',
-    tagType: 'overdue',
-    lastSeen: '4 days ago',
-    avatar: null,
-  },
-  {
-    id: 2,
-    name: 'Marcus Lee',
-    initials: 'ML',
-    issue: 'No check-in logged since Monday',
-    tag: 'Check-in due',
-    tagType: 'checkin',
-    lastSeen: '5 days ago',
-    avatar: null,
-  },
-  {
-    id: 3,
-    name: 'Priya Nair',
-    initials: 'PN',
-    issue: 'Reported knee pain in last log',
-    tag: 'Health flag',
-    tagType: 'health',
-    lastSeen: '2 days ago',
-    avatar: null,
-  },
-  {
-    id: 4,
-    name: 'Tom Richter',
-    initials: 'TR',
-    issue: 'Completion rate dropped to 40%',
-    tag: 'Low effort',
-    tagType: 'effort',
-    lastSeen: '1 day ago',
-    avatar: null,
-  },
-  {
-    id: 5,
-    name: 'Elena Vasquez',
-    initials: 'EV',
-    issue: 'Asked about nutrition plan update',
-    tag: 'Message',
-    tagType: 'message',
-    lastSeen: '3 hours ago',
-    avatar: null,
-  },
-]
+const clients = getClientsNeedingAttention()
 
 const tagColors = {
   overdue:  { bg: 'rgba(255,107,91,0.12)', color: '#FF6B5B' },
@@ -62,15 +12,8 @@ const tagColors = {
   message:  { bg: 'rgba(46,196,160,0.12)', color: '#2EC4A0' },
 }
 
-const avatarColors = [
-  'linear-gradient(135deg,#FF6B5B,#FFA733)',
-  'linear-gradient(135deg,#FFA733,#2EC4A0)',
-  'linear-gradient(135deg,#2EC4A0,#6C63FF)',
-  'linear-gradient(135deg,#FF6B5B,#6C63FF)',
-  'linear-gradient(135deg,#6C63FF,#2EC4A0)',
-]
 
-export default function NeedsAttentionPanel() {
+export default function NeedsAttentionPanel({ onSelectClient, onViewAll }) {
   return (
     <div className="panel">
       <div className="panel-header">
@@ -79,17 +22,22 @@ export default function NeedsAttentionPanel() {
           <h2 className="panel-title">Needs Attention</h2>
           <span className="panel-count">{clients.length}</span>
         </div>
-        <button className="panel-action-btn">View all</button>
+        <button className="panel-action-btn" onClick={onViewAll}>View all</button>
       </div>
 
       <div className="attention-list">
-        {clients.map((client, i) => {
-          const tag = tagColors[client.tagType]
+        {clients.map((client) => {
+          const flag = client.attentionFlag
+          const tag = tagColors[flag.tagType]
           return (
-            <div key={client.id} className="attention-item">
+            <div
+              key={client.id}
+              className={`attention-item${onSelectClient ? ' attention-item--clickable' : ''}`}
+              onClick={() => onSelectClient?.(client.id)}
+            >
               <div
                 className="client-avatar"
-                style={{ background: avatarColors[i % avatarColors.length] }}
+                style={{ background: client.avatarGrad }}
               >
                 {client.initials}
               </div>
@@ -100,20 +48,24 @@ export default function NeedsAttentionPanel() {
                     className="client-tag"
                     style={{ background: tag.bg, color: tag.color }}
                   >
-                    {client.tag}
+                    {flag.tag}
                   </span>
                 </div>
-                <p className="client-issue">{client.issue}</p>
+                <p className="client-issue">{flag.issue}</p>
                 <p className="client-last-seen">Last active: {client.lastSeen}</p>
               </div>
               <div className="client-actions">
-                <button className="icon-btn" title="Send message">
+                <button className="icon-btn" title="Send message" onClick={e => e.stopPropagation()}>
                   <MessageSquare size={14} />
                 </button>
-                <button className="icon-btn" title="Update plan">
+                <button className="icon-btn" title="Update plan" onClick={e => e.stopPropagation()}>
                   <RefreshCw size={14} />
                 </button>
-                <button className="icon-btn icon-btn--chevron" title="View profile">
+                <button
+                  className="icon-btn icon-btn--chevron"
+                  title="View profile"
+                  onClick={e => { e.stopPropagation(); onSelectClient?.(client.id) }}
+                >
                   <ChevronRight size={14} />
                 </button>
               </div>

@@ -1,35 +1,8 @@
 import { Calendar, ArrowRight, RefreshCw } from 'lucide-react'
+import { getClientsWithEndingPlans } from '../../data/mockData'
 import './PlansEndingSoonPanel.css'
 
-const plans = [
-  {
-    id: 1,
-    name: 'Alex Turner',
-    initials: 'AT',
-    plan: '12-Week Strength Build',
-    daysLeft: 3,
-    progress: 92,
-    avatarGrad: 'linear-gradient(135deg,#FF6B5B,#FFA733)',
-  },
-  {
-    id: 2,
-    name: 'Keiko Tanaka',
-    initials: 'KT',
-    plan: 'Summer Shred Program',
-    daysLeft: 5,
-    progress: 85,
-    avatarGrad: 'linear-gradient(135deg,#FFA733,#2EC4A0)',
-  },
-  {
-    id: 3,
-    name: 'Damien Cross',
-    initials: 'DC',
-    plan: 'Mobility & Recovery',
-    daysLeft: 7,
-    progress: 78,
-    avatarGrad: 'linear-gradient(135deg,#2EC4A0,#6C63FF)',
-  },
-]
+const plans = getClientsWithEndingPlans(7)
 
 function urgencyColor(days) {
   if (days <= 3) return { color: '#FF6B5B', bg: 'rgba(255,107,91,0.12)' }
@@ -49,7 +22,7 @@ export default function PlansEndingSoonPanel() {
 
       <div className="plans-list">
         {plans.map((client) => {
-          const urgency = urgencyColor(client.daysLeft)
+          const urgency = urgencyColor(client.currentPlan.daysLeft)
           return (
             <div key={client.id} className="plan-item">
               <div
@@ -66,23 +39,23 @@ export default function PlansEndingSoonPanel() {
                     className="plan-days-badge"
                     style={{ color: urgency.color, background: urgency.bg }}
                   >
-                    {client.daysLeft}d left
+                    {client.currentPlan.daysLeft}d left
                   </span>
                 </div>
 
-                <p className="plan-name">{client.plan}</p>
+                <p className="plan-name">{client.currentPlan.name}</p>
 
                 <div className="plan-progress-row">
                   <div className="progress-track">
                     <div
                       className="progress-fill"
                       style={{
-                        width: `${client.progress}%`,
+                        width: `${client.currentPlan.progress}%`,
                         background: `linear-gradient(90deg, var(--coral), var(--amber))`,
                       }}
                     />
                   </div>
-                  <span className="progress-pct">{client.progress}%</span>
+                  <span className="progress-pct">{client.currentPlan.progress}%</span>
                 </div>
               </div>
 

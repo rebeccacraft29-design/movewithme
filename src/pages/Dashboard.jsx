@@ -3,6 +3,7 @@ import NeedsAttentionPanel from '../components/dashboard/NeedsAttentionPanel'
 import SmartInsightsPanel from '../components/dashboard/SmartInsightsPanel'
 import PlansEndingSoonPanel from '../components/dashboard/PlansEndingSoonPanel'
 import CalendarPanel from '../components/dashboard/CalendarPanel'
+import { getActiveClients, getClientsNeedingAttention, getClientsWithEndingPlans } from '../data/mockData'
 import { Users, TrendingUp, AlertCircle, Calendar } from 'lucide-react'
 import './Dashboard.css'
 
@@ -14,10 +15,16 @@ const dateStr = today.toLocaleDateString('en-US', {
   day: 'numeric',
 })
 
+const activeClients = getActiveClients()
+const needsAttention = getClientsNeedingAttention()
+const endingSoon = getClientsWithEndingPlans(7)
+
+const overdueCount = needsAttention.filter(c => c.attentionFlag.tagType === 'overdue').length
+
 const stats = [
   {
     label: 'Active Clients',
-    value: '24',
+    value: String(activeClients.length),
     delta: '+2 this week',
     deltaPositive: true,
     icon: Users,
@@ -33,15 +40,15 @@ const stats = [
   },
   {
     label: 'Needs Attention',
-    value: '5',
-    delta: '3 overdue check-ins',
+    value: String(needsAttention.length),
+    delta: overdueCount > 0 ? `${overdueCount} overdue` : 'No overdue clients',
     deltaPositive: false,
     icon: AlertCircle,
     accent: 'amber',
   },
   {
     label: 'Plans Ending Soon',
-    value: '3',
+    value: String(endingSoon.length),
     delta: 'Within 7 days',
     deltaPositive: null,
     icon: Calendar,
@@ -49,7 +56,13 @@ const stats = [
   },
 ]
 
-export default function Dashboard() {
+export default function Dashboard({ onNavigateToClients, onSelectClient }) {
+  const statClicks = {
+    'Active Clients':     () => onNavigateToClients?.('allActive'),
+    'Needs Attention':    () => onNavigateToClients?.('attention'),
+    'Plans Ending Soon':  () => onNavigateToClients?.('ending'),
+  }
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
@@ -62,13 +75,16 @@ export default function Dashboard() {
 
       <div className="stats-grid">
         {stats.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
+          <StatCard key={stat.label} {...stat} onClick={statClicks[stat.label]} />
         ))}
       </div>
 
       <div className="dashboard-panels">
         <div className="panels-left">
-          <NeedsAttentionPanel />
+          <NeedsAttentionPanel
+            onSelectClient={onSelectClient}
+            onViewAll={() => onNavigateToClients?.('attention')}
+          />
           <SmartInsightsPanel />
         </div>
         <div className="panels-right">

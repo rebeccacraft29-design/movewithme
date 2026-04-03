@@ -70,6 +70,10 @@
   border-bottom: none;
 }
 
+.attention-item--clickable {
+  cursor: pointer;
+}
+
 .attention-item:hover {
   background: var(--surface-raised);
 }
@@ -157,4 +161,10 @@
 
 .icon-btn--chevron {
   color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .attention-item { padding: 14px 14px; min-height: 60px; }
+  .panel-action-btn { min-height: 44px; }
+  .icon-btn { width: 44px; height: 44px; }
 }

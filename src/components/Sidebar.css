@@ -151,3 +151,70 @@
   font-size: 11px;
   color: var(--text-muted);
 }
+
+/* ─── Mobile: collapse to bottom nav bar ─────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: 100%;
+    height: 60px;
+    min-width: 0;
+    flex-direction: row;
+    align-items: stretch;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    z-index: 50;
+    padding: 0;
+  }
+
+  .sidebar-logo   { display: none; }
+  .sidebar-bottom { display: none; }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .sidebar-nav .nav-list {
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: stretch;
+    height: 60px;
+    gap: 0;
+  }
+
+  .sidebar-nav .nav-list li {
+    flex: 1;
+    display: flex;
+  }
+
+  .nav-item {
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 4px;
+    border-radius: 0;
+    font-size: 9px;
+    min-height: 60px;
+  }
+
+  /* Hide text labels — icons only */
+  .nav-item span { display: none; }
+  .nav-badge { display: none; }
+
+  .nav-item.active {
+    background: transparent;
+    color: var(--coral);
+    border-top: 2px solid var(--coral);
+  }
+
+  .nav-item.active svg { color: var(--coral); }
+}

@@ -8,6 +8,16 @@
   gap: 8px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   cursor: default;
+  text-align: left;
+  width: 100%;
+}
+
+.stat-card--clickable {
+  cursor: pointer;
+}
+
+.stat-card--clickable:hover {
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .stat-card:hover {
@@ -68,4 +78,9 @@
 .stat-delta.neutral {
   color: var(--text-muted);
   background: rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 768px) {
+  .stat-card { padding: 14px; }
+  .stat-value { font-size: 26px; }
 }
