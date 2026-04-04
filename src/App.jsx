@@ -5,6 +5,7 @@ import ClientsPage from './pages/Clients'
 import ClientProfile from './pages/ClientProfile'
 import Schedule from './pages/Schedule'
 import Settings from './pages/Settings'
+import Reports from './pages/Reports'
 import NewSessionPanel from './components/NewSessionPanel'
 import { scheduleSessions } from './data/scheduleData'
 import { defaultSessionTypes } from './data/sessionTypes'
@@ -13,6 +14,7 @@ import './App.css'
 export default function App() {
   const [activePage,      setActivePage]      = useState('dashboard')
   const [activeClientId,  setActiveClientId]  = useState(null)
+  const [activeClientTab, setActiveClientTab] = useState('overview')
   const [clientsFilter,   setClientsFilter]   = useState('allActive')
   const [sessions,        setSessions]        = useState(scheduleSessions)
   const [sessionTypes,    setSessionTypes]    = useState(defaultSessionTypes)
@@ -29,12 +31,13 @@ export default function App() {
     setActiveClientId(null)
   }
 
-  function handleSelectClient(clientId) {
+  function handleSelectClient(clientId, tab = 'overview') {
     setActiveClientId(clientId)
+    setActiveClientTab(tab)
     setActivePage('clients')
   }
 
-  const knownPages = ['dashboard', 'clients', 'schedule', 'settings']
+  const knownPages = ['dashboard', 'clients', 'schedule', 'settings', 'reports']
 
   return (
     <div className="app-layout">
@@ -45,6 +48,7 @@ export default function App() {
           <Dashboard
             onNavigateToClients={handleNavigateToClients}
             onSelectClient={handleSelectClient}
+            onNavigate={handleNavigate}
           />
         )}
 
@@ -59,6 +63,7 @@ export default function App() {
           <ClientProfile
             clientId={activeClientId}
             sessions={sessions}
+            initialTab={activeClientTab}
             onBack={() => setActiveClientId(null)}
           />
         )}
@@ -78,6 +83,10 @@ export default function App() {
             sessionTypes={sessionTypes}
             setSessionTypes={setSessionTypes}
           />
+        )}
+
+        {activePage === 'reports' && (
+          <Reports />
         )}
 
         {!knownPages.includes(activePage) && (

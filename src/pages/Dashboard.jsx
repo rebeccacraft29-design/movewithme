@@ -56,7 +56,7 @@ const stats = [
   },
 ]
 
-export default function Dashboard({ onNavigateToClients, onSelectClient }) {
+export default function Dashboard({ onNavigateToClients, onSelectClient, onNavigate }) {
   const statClicks = {
     'Active Clients':     () => onNavigateToClients?.('allActive'),
     'Needs Attention':    () => onNavigateToClients?.('attention'),
@@ -85,11 +85,11 @@ export default function Dashboard({ onNavigateToClients, onSelectClient }) {
             onSelectClient={onSelectClient}
             onViewAll={() => onNavigateToClients?.('attention')}
           />
-          <SmartInsightsPanel />
+          <SmartInsightsPanel onNavigate={onNavigate} />
         </div>
         <div className="panels-right">
           <CalendarPanel />
-          <PlansEndingSoonPanel />
+          <PlansEndingSoonPanel onSelectClient={onSelectClient} />
         </div>
       </div>
     </div>

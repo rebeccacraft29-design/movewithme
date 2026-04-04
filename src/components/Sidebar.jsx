@@ -3,6 +3,7 @@ import {
   Users,
   ClipboardList,
   BarChart2,
+  FileBarChart,
   MessageSquare,
   Calendar,
   Settings,
@@ -16,6 +17,7 @@ const navItems = [
   { id: 'clients', label: 'Clients', icon: Users },
   { id: 'programs', label: 'Programs', icon: ClipboardList },
   { id: 'progress', label: 'Progress', icon: BarChart2 },
+  { id: 'reports', label: 'Reports', icon: FileBarChart },
   { id: 'messages', label: 'Messages', icon: MessageSquare, badge: 3 },
   { id: 'schedule', label: 'Schedule', icon: Calendar },
 ]

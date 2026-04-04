@@ -42,7 +42,7 @@ const accentMap = {
   teal:  { icon: '#2EC4A0', bg: 'rgba(46,196,160,0.1)', border: 'rgba(46,196,160,0.2)' },
 }
 
-export default function SmartInsightsPanel() {
+export default function SmartInsightsPanel({ onNavigate }) {
   return (
     <div className="panel">
       <div className="panel-header">
@@ -51,7 +51,7 @@ export default function SmartInsightsPanel() {
           <h2 className="panel-title">Smart Insights</h2>
           <span className="insights-badge">AI</span>
         </div>
-        <button className="panel-action-btn">See all patterns</button>
+        <button className="panel-action-btn" onClick={() => onNavigate?.('reports')}>See all patterns</button>
       </div>
 
       <div className="insights-list">

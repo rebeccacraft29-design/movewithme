@@ -543,9 +543,9 @@ function MessageThread({ messages }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function ClientProfile({ clientId, onBack, sessions = [] }) {
+export default function ClientProfile({ clientId, onBack, sessions = [], initialTab = 'overview' }) {
   const client = getClientById(clientId)
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState(initialTab)
 
   if (!client) return (
     <div className="profile-page">
@@ -620,6 +620,12 @@ export default function ClientProfile({ clientId, onBack, sessions = [] }) {
           Overview
         </button>
         <button
+          className={`prf-tab${activeTab === 'program' ? ' prf-tab--active' : ''}`}
+          onClick={() => setActiveTab('program')}
+        >
+          {svcConfig.programNoun}
+        </button>
+        <button
           className={`prf-tab${activeTab === 'schedule' ? ' prf-tab--active' : ''}`}
           onClick={() => setActiveTab('schedule')}
         >
@@ -642,7 +648,20 @@ export default function ClientProfile({ clientId, onBack, sessions = [] }) {
         </div>
       )}
 
-      {/* ── Schedule tab (feature 4) ── */}
+      {/* ── Program tab ── */}
+      {activeTab === 'program' && (
+        <div className="prf-body">
+          <div className="prf-col-left">
+            <PlanCard client={client} svcConfig={svcConfig} />
+            <SessionsSection client={client} svcConfig={svcConfig} />
+          </div>
+          <div className="prf-col-right">
+            <HabitTracker weeklyHabits={extras.weeklyHabits} />
+          </div>
+        </div>
+      )}
+
+      {/* ── Schedule tab ── */}
       {activeTab === 'schedule' && (
         <ScheduleTab client={client} sessions={sessions} />
       )}

@@ -10,7 +10,7 @@ function urgencyColor(days) {
   return { color: '#2EC4A0', bg: 'rgba(46,196,160,0.12)' }
 }
 
-export default function PlansEndingSoonPanel() {
+export default function PlansEndingSoonPanel({ onSelectClient }) {
   return (
     <div className="panel">
       <div className="panel-header">
@@ -63,7 +63,11 @@ export default function PlansEndingSoonPanel() {
                 <button className="plan-btn plan-btn--renew" title="Renew plan">
                   <RefreshCw size={13} />
                 </button>
-                <button className="plan-btn plan-btn--view" title="View plan">
+                <button
+                  className="plan-btn plan-btn--view"
+                  title="View program"
+                  onClick={() => onSelectClient?.(client.id, 'program')}
+                >
                   <ArrowRight size={13} />
                 </button>
               </div>
