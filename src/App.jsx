@@ -6,9 +6,11 @@ import ClientProfile from './pages/ClientProfile'
 import Schedule from './pages/Schedule'
 import Settings from './pages/Settings'
 import Reports from './pages/Reports'
+import MessagesPage from './pages/Messages'
 import NewSessionPanel from './components/NewSessionPanel'
 import { scheduleSessions } from './data/scheduleData'
 import { defaultSessionTypes } from './data/sessionTypes'
+import { initialConversations } from './data/messagesData'
 import './App.css'
 
 export default function App() {
@@ -19,6 +21,9 @@ export default function App() {
   const [sessions,        setSessions]        = useState(scheduleSessions)
   const [sessionTypes,    setSessionTypes]    = useState(defaultSessionTypes)
   const [newSessionOpen,  setNewSessionOpen]  = useState(false)
+  const [conversations,   setConversations]   = useState(initialConversations)
+
+  const unreadMessages = conversations.reduce((sum, c) => sum + c.unreadCount, 0)
 
   function handleNavigate(page) {
     setActivePage(page)
@@ -37,11 +42,11 @@ export default function App() {
     setActivePage('clients')
   }
 
-  const knownPages = ['dashboard', 'clients', 'schedule', 'settings', 'reports']
+  const knownPages = ['dashboard', 'clients', 'schedule', 'settings', 'reports', 'messages']
 
   return (
     <div className="app-layout">
-      <Sidebar activePage={activePage} onNavigate={handleNavigate} />
+      <Sidebar activePage={activePage} onNavigate={handleNavigate} unreadMessages={unreadMessages} />
 
       <main className="main-content">
         {activePage === 'dashboard' && (
@@ -87,6 +92,13 @@ export default function App() {
 
         {activePage === 'reports' && (
           <Reports />
+        )}
+
+        {activePage === 'messages' && (
+          <MessagesPage
+            conversations={conversations}
+            setConversations={setConversations}
+          />
         )}
 
         {!knownPages.includes(activePage) && (

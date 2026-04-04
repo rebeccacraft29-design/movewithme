@@ -18,7 +18,7 @@ const navItems = [
   { id: 'programs', label: 'Programs', icon: ClipboardList },
   { id: 'progress', label: 'Progress', icon: BarChart2 },
   { id: 'reports', label: 'Reports', icon: FileBarChart },
-  { id: 'messages', label: 'Messages', icon: MessageSquare, badge: 3 },
+  { id: 'messages', label: 'Messages', icon: MessageSquare },
   { id: 'schedule', label: 'Schedule', icon: Calendar },
 ]
 
@@ -26,7 +26,7 @@ const bottomItems = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
-export default function Sidebar({ activePage, onNavigate }) {
+export default function Sidebar({ activePage, onNavigate, unreadMessages = 0 }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -38,18 +38,21 @@ export default function Sidebar({ activePage, onNavigate }) {
 
       <nav className="sidebar-nav">
         <ul className="nav-list">
-          {navItems.map(({ id, label, icon: Icon, badge }) => (
-            <li key={id}>
-              <button
-                className={`nav-item ${activePage === id ? 'active' : ''}`}
-                onClick={() => onNavigate(id)}
-              >
-                <Icon size={18} />
-                <span>{label}</span>
-                {badge && <span className="nav-badge">{badge}</span>}
-              </button>
-            </li>
-          ))}
+          {navItems.map(({ id, label, icon: Icon }) => {
+            const badge = id === 'messages' && unreadMessages > 0 ? unreadMessages : null
+            return (
+              <li key={id}>
+                <button
+                  className={`nav-item ${activePage === id ? 'active' : ''}`}
+                  onClick={() => onNavigate(id)}
+                >
+                  <Icon size={18} />
+                  <span>{label}</span>
+                  {badge && <span className="nav-badge">{badge}</span>}
+                </button>
+              </li>
+            )
+          })}
         </ul>
       </nav>
 
