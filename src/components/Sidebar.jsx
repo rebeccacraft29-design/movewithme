@@ -12,19 +12,21 @@ import {
 } from 'lucide-react'
 import './Sidebar.css'
 
+// ── Nav config ────────────────────────────────────────────────────────────────
+
 const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'clients', label: 'Clients', icon: Users },
-  { id: 'programs', label: 'Programs', icon: ClipboardList },
-  { id: 'progress', label: 'Progress', icon: BarChart2 },
-  { id: 'reports', label: 'Reports', icon: FileBarChart },
-  { id: 'messages', label: 'Messages', icon: MessageSquare },
-  { id: 'schedule', label: 'Schedule', icon: Calendar },
+  { id: 'programs',  label: 'Programs',  icon: ClipboardList },
+  { id: 'progress',  label: 'Progress',  icon: BarChart2 },
+  { id: 'reports',   label: 'Reports',   icon: FileBarChart },
+  { id: 'messages',  label: 'Messages',  icon: MessageSquare },
+  { id: 'schedule',  label: 'Schedule',  icon: Calendar },
 ]
 
 const bottomItems = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ]
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
 
 export default function Sidebar({ activePage, onNavigate, unreadMessages = 0 }) {
   return (
@@ -38,6 +40,29 @@ export default function Sidebar({ activePage, onNavigate, unreadMessages = 0 }) 
 
       <nav className="sidebar-nav">
         <ul className="nav-list">
+          {/* Dashboard */}
+          <li>
+            <button
+              className={`nav-item ${activePage === 'dashboard' ? 'active' : ''}`}
+              onClick={() => onNavigate('dashboard')}
+            >
+              <LayoutDashboard size={18} />
+              <span>Dashboard</span>
+            </button>
+          </li>
+
+          {/* Clients */}
+          <li>
+            <button
+              className={`nav-item ${activePage === 'clients' ? 'active' : ''}`}
+              onClick={() => onNavigate('clients')}
+            >
+              <Users size={18} />
+              <span>Clients</span>
+            </button>
+          </li>
+
+          {/* Remaining nav items */}
           {navItems.map(({ id, label, icon: Icon }) => {
             const badge = id === 'messages' && unreadMessages > 0 ? unreadMessages : null
             return (

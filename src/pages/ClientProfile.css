@@ -851,3 +851,110 @@
   /* Add note button */
   .prf-add-note-btn { min-height: 36px; }
 }
+
+/* ── Progress tab ──────────────────────────────────────────────────────────── */
+
+.prf-progress-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.prf-prog-range-row {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  align-self: flex-start;
+}
+
+.prf-prog-range-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  padding: 6px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.prf-prog-range-btn:hover { color: var(--text-primary); background: var(--border); }
+.prf-prog-range-btn.active { background: var(--navy-lighter); color: var(--text-primary); }
+
+.prf-prog-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.prf-prog-add-btn:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.2); }
+
+.prf-prog-add-goal-form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prf-prog-form-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.prf-prog-input {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 7px 11px;
+  flex: 1;
+  min-width: 120px;
+  outline: none;
+  transition: border-color 0.15s;
+  appearance: none;
+}
+.prf-prog-input:focus { border-color: rgba(255,255,255,0.25); }
+.prf-prog-input::placeholder { color: var(--text-muted); }
+.prf-prog-input option { background: var(--surface); color: var(--text-primary); }
+
+.prf-prog-save-btn {
+  align-self: flex-start;
+  background: #2EC4A0;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.prf-prog-save-btn:hover:not(:disabled) { opacity: 0.85; }
+.prf-prog-save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.prf-prog-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+}

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { Search, Paperclip, Send, ArrowLeft, MessageSquare, X, ChevronRight } from 'lucide-react'
+import { Paperclip, Send, ArrowLeft, MessageSquare, X, ChevronRight } from 'lucide-react'
 import { clients, getServiceConfig } from '../data/mockData'
+import SearchDropdown from '../components/SearchDropdown'
 import './Messages.css'
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
@@ -300,7 +301,6 @@ function MessageBubble({ message, client, onToggleLike }) {
 export default function MessagesPage({ conversations, setConversations }) {
   const [selectedClientId, setSelectedClientId] = useState(null)
   const [mobileView,       setMobileView]       = useState('inbox') // 'inbox' | 'thread'
-  const [search,           setSearch]           = useState('')
   const [inputText,        setInputText]        = useState('')
   const [linkInputOpen,    setLinkInputOpen]    = useState(false)
   const [linkUrl,          setLinkUrl]          = useState('')
@@ -318,15 +318,14 @@ export default function MessagesPage({ conversations, setConversations }) {
   const enrichedConvs = conversations
     .map(conv => ({ ...conv, client: clients.find(c => c.id === conv.clientId) }))
     .filter(ec => ec.client)
-    .filter(ec => {
-      if (!search.trim()) return true
-      const q = search.toLowerCase()
-      return (
-        ec.client.name.toLowerCase().includes(q) ||
-        ec.messages.some(m => m.text.toLowerCase().includes(q))
-      )
-    })
     .sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt))
+
+  const conversationClients = enrichedConvs.map(({ client }) => ({
+    id: client.id,
+    name: client.name,
+    avatarGrad: client.avatarGrad,
+    initials: client.initials,
+  }))
 
   // Scroll to bottom when thread opens or new message arrives
   useEffect(() => {
@@ -437,16 +436,13 @@ export default function MessagesPage({ conversations, setConversations }) {
       <div className={`messages-inbox${mobileView === 'thread' ? ' hidden' : ''}`}>
         <div className="messages-inbox-header">
           <h1 className="messages-inbox-title">Messages</h1>
-          <div className="messages-search-wrap">
-            <Search size={14} className="messages-search-icon" />
-            <input
-              className="messages-search"
-              type="text"
-              placeholder="Search conversations…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
+          <SearchDropdown
+            items={conversationClients}
+            selectedId={selectedClientId}
+            onSelect={handleSelectConversation}
+            placeholder="Search conversations…"
+            searchPlaceholder="Search clients…"
+          />
         </div>
 
         <div className="conversation-list">

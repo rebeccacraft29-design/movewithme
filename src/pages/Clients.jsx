@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react'
-import { Search, Flame, ChevronRight, AlertCircle, Calendar as CalendarIcon } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { Flame, ChevronRight, SlidersHorizontal, GripVertical, X } from 'lucide-react'
 import { clients, getServiceConfig } from '../data/mockData'
+import SearchDropdown from '../components/SearchDropdown'
 import './Clients.css'
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Date helpers ──────────────────────────────────────────────────────────────
 
 function getMondayOfWeek(date) {
   const d = new Date(date)
@@ -27,12 +28,10 @@ function getThisWeekCompletion(client) {
   const monday = getMondayOfWeek(new Date())
   const today = new Date()
   today.setHours(23, 59, 59, 999)
-
   const sessions = [...client.trainerSessions, ...client.independentSessions].filter(s => {
     const d = new Date(s.date)
     return d >= monday && d <= today
   })
-
   if (sessions.length === 0) return null
   return Math.round((sessions.filter(s => s.completed).length / sessions.length) * 100)
 }
@@ -50,7 +49,6 @@ function getStreak(client) {
   thisWeekSun.setHours(23, 59, 59, 999)
 
   const hasThisWeek = completedDates.some(d => d >= thisWeekMon && d <= thisWeekSun)
-
   let weekMon = new Date(thisWeekMon)
   if (!hasThisWeek) weekMon.setDate(weekMon.getDate() - 7)
 
@@ -59,54 +57,71 @@ function getStreak(client) {
     const weekSun = new Date(weekMon)
     weekSun.setDate(weekMon.getDate() + 6)
     weekSun.setHours(23, 59, 59, 999)
-
     if (!completedDates.some(d => d >= weekMon && d <= weekSun)) break
     streak++
     weekMon.setDate(weekMon.getDate() - 7)
   }
-
   return streak
 }
 
 function isToday(dateStr) {
   if (!dateStr) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
   const d = new Date(dateStr + 'T00:00:00')
-  const tomorrow = new Date(today)
-  tomorrow.setDate(today.getDate() + 1)
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1)
   return d >= today && d < tomorrow
 }
 
 function isThisWeek(dateStr) {
   if (!dateStr) return false
   const monday = getMondayOfWeek(new Date())
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  sunday.setHours(23, 59, 59, 999)
+  const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6); sunday.setHours(23, 59, 59, 999)
   const d = new Date(dateStr + 'T00:00:00')
   return d >= monday && d <= sunday
 }
 
 function formatNextSession(dateStr) {
   if (!dateStr) return null
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const today = new Date(); today.setHours(0, 0, 0, 0)
   const d = new Date(dateStr + 'T00:00:00')
   const diffDays = Math.round((d - today) / 86400000)
-
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Tomorrow'
   if (diffDays < 0) return null
-
   const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
   const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
   if (diffDays < 7) return `${DAY[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}`
   return `${MON[d.getMonth()]} ${d.getDate()}`
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Column definitions ────────────────────────────────────────────────────────
+
+const COLUMN_DEFS = {
+  plan:        { label: 'Current Plan',  width: '2fr'   },
+  completion:  { label: 'This Week',    width: '170px' },
+  streak:      { label: 'Streak',       width: '70px'  },
+  status:      { label: 'Status',       width: '120px' },
+  nextSession: { label: 'Next Session', width: '110px' },
+}
+
+const DEFAULT_COL_ORDER = ['plan', 'completion', 'streak', 'status', 'nextSession']
+
+function buildGrid(colOrder) {
+  return `44px 2fr ${colOrder.map(k => COLUMN_DEFS[k].width).join(' ')} 28px`
+}
+
+// ── Accordion groups ──────────────────────────────────────────────────────────
+
+const GROUPS = [
+  { key: 'allActive', label: 'All Active',        filter: c => c.status === 'active',                        accent: null  },
+  { key: 'today',     label: 'Today',             filter: c => isToday(c.nextSession),                       accent: null  },
+  { key: 'week',      label: 'This Week',         filter: c => isThisWeek(c.nextSession),                    accent: null  },
+  { key: 'attention', label: 'Needs Attention',   filter: c => !!c.attentionFlag,                            accent: 'amber' },
+  { key: 'ending',    label: 'Plans Ending Soon', filter: c => c.currentPlan && c.currentPlan.daysLeft <= 7, accent: 'red' },
+  { key: 'inactive',  label: 'Inactive',          filter: c => c.status === 'inactive',                      accent: null  },
+]
+
+// ── Style constants ───────────────────────────────────────────────────────────
 
 const SERVICE_COLORS = {
   personal_trainer:  { bg: 'rgba(255,107,91,0.12)',  color: '#FF6B5B' },
@@ -117,16 +132,16 @@ const SERVICE_COLORS = {
 }
 
 const ATTENTION_COLORS = {
-  overdue:  { bg: 'rgba(255,107,91,0.12)',  color: '#FF6B5B' },
-  checkin:  { bg: 'rgba(255,167,51,0.12)',  color: '#FFA733' },
-  health:   { bg: 'rgba(255,100,100,0.12)', color: '#FF6464' },
-  effort:   { bg: 'rgba(255,167,51,0.12)',  color: '#FFA733' },
-  message:  { bg: 'rgba(46,196,160,0.12)',  color: '#2EC4A0' },
+  overdue: { bg: 'rgba(255,107,91,0.12)',  color: '#FF6B5B' },
+  checkin: { bg: 'rgba(255,167,51,0.12)',  color: '#FFA733' },
+  health:  { bg: 'rgba(255,100,100,0.12)', color: '#FF6464' },
+  effort:  { bg: 'rgba(255,167,51,0.12)',  color: '#FFA733' },
+  message: { bg: 'rgba(46,196,160,0.12)',  color: '#2EC4A0' },
 }
 
 // ── ClientRow ─────────────────────────────────────────────────────────────────
 
-function ClientRow({ client, onClick }) {
+function ClientRow({ client, onClick, columnOrder }) {
   const svcConfig = getServiceConfig(client.serviceType)
   const svcColors = SERVICE_COLORS[client.serviceType] ?? SERVICE_COLORS.other
   const completion = getThisWeekCompletion(client)
@@ -134,29 +149,19 @@ function ClientRow({ client, onClick }) {
   const flag = client.attentionFlag
   const planEndingSoon = !flag && client.currentPlan && client.currentPlan.daysLeft <= 7
 
-  const weekNum = client.currentPlan ? getWeekInPlan(client.currentPlan.startDate) : null
-  const totalWeeks = client.currentPlan
-    ? getTotalPlanWeeks(client.currentPlan.startDate, client.currentPlan.endDate)
-    : null
+  const weekNum    = client.currentPlan ? getWeekInPlan(client.currentPlan.startDate) : null
+  const totalWeeks = client.currentPlan ? getTotalPlanWeeks(client.currentPlan.startDate, client.currentPlan.endDate) : null
 
   let statusBg, statusColor, statusLabel
   if (client.status === 'inactive') {
-    statusBg = 'rgba(144,144,176,0.12)'
-    statusColor = '#9090B0'
-    statusLabel = 'Inactive'
+    statusBg = 'rgba(144,144,176,0.12)'; statusColor = '#9090B0'; statusLabel = 'Inactive'
   } else if (flag) {
     const ac = ATTENTION_COLORS[flag.tagType] ?? ATTENTION_COLORS.checkin
-    statusBg = ac.bg
-    statusColor = ac.color
-    statusLabel = flag.tag
+    statusBg = ac.bg; statusColor = ac.color; statusLabel = flag.tag
   } else if (planEndingSoon) {
-    statusBg = 'rgba(255,167,51,0.12)'
-    statusColor = '#FFA733'
-    statusLabel = `${client.currentPlan.daysLeft}d left`
+    statusBg = 'rgba(255,167,51,0.12)'; statusColor = '#FFA733'; statusLabel = `${client.currentPlan.daysLeft}d left`
   } else {
-    statusBg = 'rgba(46,196,160,0.12)'
-    statusColor = '#2EC4A0'
-    statusLabel = 'Active'
+    statusBg = 'rgba(46,196,160,0.12)'; statusColor = '#2EC4A0'; statusLabel = 'Active'
   }
 
   let barGradient = 'linear-gradient(90deg,#2EC4A0,#4DD4B3)'
@@ -166,23 +171,9 @@ function ClientRow({ client, onClick }) {
   const nextSessionLabel = formatNextSession(client.nextSession)
   const nextIsToday = isToday(client.nextSession)
 
-  return (
-    <button className="client-row" onClick={onClick}>
-      <div className="cr-avatar" style={{ background: client.avatarGrad }}>
-        {client.initials}
-      </div>
-
-      <div className="cr-identity">
-        <span className="cr-name">{client.name}</span>
-        <span
-          className="cr-service-badge"
-          style={{ background: svcColors.bg, color: svcColors.color }}
-        >
-          {svcConfig.label}
-        </span>
-      </div>
-
-      <div className="cr-plan">
+  const cells = {
+    plan: (
+      <div className="cr-plan" key="plan">
         {client.currentPlan ? (
           <>
             <span className="cr-plan-name">{client.currentPlan.name}</span>
@@ -192,15 +183,13 @@ function ClientRow({ client, onClick }) {
           <span className="cr-muted">No active plan</span>
         )}
       </div>
-
-      <div className="cr-completion">
+    ),
+    completion: (
+      <div className="cr-completion" key="completion">
         {completion !== null ? (
           <>
             <div className="cr-progress-track">
-              <div
-                className="cr-progress-fill"
-                style={{ width: `${completion}%`, background: barGradient }}
-              />
+              <div className="cr-progress-fill" style={{ width: `${completion}%`, background: barGradient }} />
             </div>
             <span className="cr-completion-pct">{completion}%</span>
           </>
@@ -208,82 +197,128 @@ function ClientRow({ client, onClick }) {
           <span className="cr-muted">—</span>
         )}
       </div>
-
-      <div className="cr-streak">
+    ),
+    streak: (
+      <div className="cr-streak" key="streak">
         {streak > 0 ? (
-          <>
-            <Flame size={12} className="streak-flame" />
-            <span>{streak}w</span>
-          </>
+          <><Flame size={12} className="streak-flame" /><span>{streak}w</span></>
         ) : (
           <span className="cr-muted">—</span>
         )}
       </div>
-
-      <div className="cr-status">
-        <span
-          className="cr-status-badge"
-          style={{ background: statusBg, color: statusColor }}
-        >
+    ),
+    status: (
+      <div className="cr-status" key="status">
+        <span className="cr-status-badge" style={{ background: statusBg, color: statusColor }}>
           {statusLabel}
         </span>
       </div>
-
-      <div className={`cr-next-session${nextIsToday ? ' cr-next-session--today' : ''}`}>
+    ),
+    nextSession: (
+      <div className={`cr-next-session${nextIsToday ? ' cr-next-session--today' : ''}`} key="nextSession">
         {nextSessionLabel ?? <span className="cr-muted">—</span>}
       </div>
+    ),
+  }
 
-      <div className="cr-arrow">
-        <ChevronRight size={15} />
+  return (
+    <button
+      className="client-row"
+      onClick={onClick}
+      style={{ gridTemplateColumns: buildGrid(columnOrder) }}
+    >
+      <div className="cr-avatar" style={{ background: client.avatarGrad }}>{client.initials}</div>
+      <div className="cr-identity">
+        <span className="cr-name">{client.name}</span>
+        <span className="cr-service-badge" style={{ background: svcColors.bg, color: svcColors.color }}>
+          {svcConfig.label}
+        </span>
       </div>
+      {columnOrder.map(k => cells[k])}
+      <div className="cr-arrow"><ChevronRight size={15} /></div>
     </button>
+  )
+}
+
+// ── Column settings panel ─────────────────────────────────────────────────────
+
+function ColumnSettings({ columnOrder, setColumnOrder, onClose }) {
+  const [dragIdx, setDragIdx] = useState(null)
+
+  function handleDrop(dropIdx) {
+    if (dragIdx === null || dragIdx === dropIdx) return setDragIdx(null)
+    const next = [...columnOrder]
+    const [item] = next.splice(dragIdx, 1)
+    next.splice(dropIdx, 0, item)
+    setColumnOrder(next)
+    setDragIdx(null)
+  }
+
+  return (
+    <div className="col-settings-panel">
+      <div className="col-settings-header">
+        <span className="col-settings-title">Customize Columns</span>
+        <button className="col-settings-close" onClick={onClose}><X size={14} /></button>
+      </div>
+      <p className="col-settings-hint">Drag to reorder</p>
+      <ul className="col-settings-list">
+        {columnOrder.map((key, idx) => (
+          <li
+            key={key}
+            className={`col-settings-item${dragIdx === idx ? ' col-settings-item--dragging' : ''}`}
+            draggable
+            onDragStart={() => setDragIdx(idx)}
+            onDragOver={e => e.preventDefault()}
+            onDrop={() => handleDrop(idx)}
+            onDragEnd={() => setDragIdx(null)}
+          >
+            <GripVertical size={14} className="col-drag-handle" />
+            <span>{COLUMN_DEFS[key].label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
 // ── ClientsPage ───────────────────────────────────────────────────────────────
 
 export default function ClientsPage({ onSelectClient, initialFilter = 'allActive' }) {
-  const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState(initialFilter)
+  const [activeFilter,    setActiveFilter]    = useState(initialFilter)
+  const [columnOrder,     setColumnOrder]     = useState(DEFAULT_COL_ORDER)
+  const [colSettingsOpen, setColSettingsOpen] = useState(false)
+  const colSettingsRef = useRef(null)
 
-  const counts = useMemo(() => ({
-    today:     clients.filter(c => isToday(c.nextSession)).length,
-    week:      clients.filter(c => isThisWeek(c.nextSession)).length,
-    allActive: clients.filter(c => c.status === 'active').length,
-    inactive:  clients.filter(c => c.status === 'inactive').length,
-    attention: clients.filter(c => c.attentionFlag).length,
-    ending:    clients.filter(c => c.currentPlan && c.currentPlan.daysLeft <= 7).length,
-  }), [])
+  // Sync active filter when navigating from sidebar dropdown
+  useEffect(() => {
+    setActiveFilter(initialFilter)
+  }, [initialFilter])
 
-  const FILTERS = [
-    { key: 'today',     label: 'Today',             count: counts.today },
-    { key: 'week',      label: 'This Week',         count: counts.week },
-    { key: 'allActive', label: 'All Active',        count: counts.allActive },
-    { key: 'inactive',  label: 'Inactive',          count: counts.inactive },
-    { key: 'attention', label: 'Needs Attention',   count: counts.attention, accent: 'amber' },
-    { key: 'ending',    label: 'Plans Ending Soon', count: counts.ending,    accent: 'red' },
-  ]
-
-  const filtered = useMemo(() => {
-    let list = clients
-    switch (filter) {
-      case 'today':     list = list.filter(c => isToday(c.nextSession)); break
-      case 'week':      list = list.filter(c => isThisWeek(c.nextSession)); break
-      case 'allActive': list = list.filter(c => c.status === 'active'); break
-      case 'inactive':  list = list.filter(c => c.status === 'inactive'); break
-      case 'attention': list = list.filter(c => c.attentionFlag); break
-      case 'ending':    list = list.filter(c => c.currentPlan && c.currentPlan.daysLeft <= 7); break
+  // Close column settings on outside click
+  useEffect(() => {
+    if (!colSettingsOpen) return
+    function handleOutside(e) {
+      if (colSettingsRef.current && !colSettingsRef.current.contains(e.target)) {
+        setColSettingsOpen(false)
+      }
     }
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter(
-        c =>
-          c.name.toLowerCase().includes(q) ||
-          getServiceConfig(c.serviceType).label.toLowerCase().includes(q)
-      )
-    }
-    return list
-  }, [search, filter])
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [colSettingsOpen])
+
+  const filteredClients = useMemo(() => {
+    const group = GROUPS.find(g => g.key === activeFilter) ?? GROUPS[0]
+    return clients.filter(group.filter)
+  }, [activeFilter])
+
+  const colHeader = (
+    <div className="clients-list-cols" style={{ gridTemplateColumns: buildGrid(columnOrder) }}>
+      <span />
+      <span>Client</span>
+      {columnOrder.map(k => <span key={k}>{COLUMN_DEFS[k].label}</span>)}
+      <span />
+    </div>
+  )
 
   return (
     <div className="clients-page">
@@ -292,54 +327,63 @@ export default function ClientsPage({ onSelectClient, initialFilter = 'allActive
           <h1 className="clients-title">Clients</h1>
           <span className="clients-total-badge">{clients.length}</span>
         </div>
-        <div className="clients-search-wrap">
-          <Search size={14} className="search-icon" />
-          <input
-            className="clients-search"
-            type="text"
-            placeholder="Search clients…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+
+        <div className="clients-header-actions">
+          <SearchDropdown
+            items={clients}
+            onSelect={onSelectClient}
+            placeholder="Search all clients…"
+            searchPlaceholder="Search clients…"
           />
+
+          <div className="col-settings-wrap" ref={colSettingsRef}>
+            <button
+              className={`col-settings-btn${colSettingsOpen ? ' active' : ''}`}
+              onClick={() => setColSettingsOpen(o => !o)}
+              title="Customize columns"
+            >
+              <SlidersHorizontal size={15} />
+            </button>
+            {colSettingsOpen && (
+              <ColumnSettings
+                columnOrder={columnOrder}
+                setColumnOrder={setColumnOrder}
+                onClose={() => setColSettingsOpen(false)}
+              />
+            )}
+          </div>
         </div>
       </header>
 
       <div className="clients-filters">
-        {FILTERS.map(f => (
-          <button
-            key={f.key}
-            className={`filter-pill${filter === f.key ? ' active' : ''}${f.accent ? ` filter-pill--${f.accent}` : ''}`}
-            onClick={() => setFilter(f.key)}
-          >
-            {f.label}
-            <span className="filter-pill-count">{f.count}</span>
-          </button>
-        ))}
+        {GROUPS.map(group => {
+          const count = clients.filter(group.filter).length
+          return (
+            <button
+              key={group.key}
+              className={`filter-pill${group.accent ? ` filter-pill--${group.accent}` : ''}${activeFilter === group.key ? ' active' : ''}`}
+              onClick={() => setActiveFilter(group.key)}
+            >
+              {group.label}
+              <span className="filter-pill-count">{count}</span>
+            </button>
+          )
+        })}
       </div>
 
       <div className="clients-list">
-        <div className="clients-list-cols">
-          <span />
-          <span>Client</span>
-          <span>Current Plan</span>
-          <span>This Week</span>
-          <span>Streak</span>
-          <span>Status</span>
-          <span>Next Session</span>
-          <span />
-        </div>
-
-        {filtered.map(client => (
-          <ClientRow
-            key={client.id}
-            client={client}
-            onClick={() => onSelectClient(client.id)}
-          />
-        ))}
-
-        {filtered.length === 0 && (
-          <div className="clients-empty">No clients match your search.</div>
-        )}
+        {colHeader}
+        {filteredClients.length > 0
+          ? filteredClients.map(client => (
+              <ClientRow
+                key={client.id}
+                client={client}
+                onClick={() => onSelectClient(client.id)}
+                columnOrder={columnOrder}
+              />
+            ))
+          : <div className="clients-empty">No clients in this group.</div>
+        }
       </div>
     </div>
   )

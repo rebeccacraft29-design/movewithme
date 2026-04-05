@@ -6,6 +6,7 @@ import ClientProfile from './pages/ClientProfile'
 import Schedule from './pages/Schedule'
 import Settings from './pages/Settings'
 import Reports from './pages/Reports'
+import Progress from './pages/Progress'
 import MessagesPage from './pages/Messages'
 import NewSessionPanel from './components/NewSessionPanel'
 import { scheduleSessions } from './data/scheduleData'
@@ -42,11 +43,15 @@ export default function App() {
     setActivePage('clients')
   }
 
-  const knownPages = ['dashboard', 'clients', 'schedule', 'settings', 'reports', 'messages']
+  const knownPages = ['dashboard', 'clients', 'schedule', 'settings', 'reports', 'messages', 'progress']
 
   return (
     <div className="app-layout">
-      <Sidebar activePage={activePage} onNavigate={handleNavigate} unreadMessages={unreadMessages} />
+      <Sidebar
+        activePage={activePage}
+        onNavigate={handleNavigate}
+        unreadMessages={unreadMessages}
+      />
 
       <main className="main-content">
         {activePage === 'dashboard' && (
@@ -87,11 +92,16 @@ export default function App() {
           <Settings
             sessionTypes={sessionTypes}
             setSessionTypes={setSessionTypes}
+            onNavigate={handleNavigate}
           />
         )}
 
         {activePage === 'reports' && (
           <Reports />
+        )}
+
+        {activePage === 'progress' && (
+          <Progress />
         )}
 
         {activePage === 'messages' && (

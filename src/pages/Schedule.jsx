@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -11,9 +11,9 @@ import {
   Users,
   Check,
   Clock,
-  Search,
 } from 'lucide-react'
 import { clients } from '../data/mockData'
+import SearchDropdown from '../components/SearchDropdown'
 import './Schedule.css'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -431,9 +431,10 @@ export default function Schedule({
   const [agendaOpen,    setAgendaOpen]    = useState(() => {
     try { return localStorage.getItem('mwm_agendaOpen') !== 'false' } catch { return true }
   })
-  const [activeFilter,  setActiveFilter]  = useState('all')
-  const [searchQuery,   setSearchQuery]   = useState('')   // ── feature 3
-  const [draggedId,     setDraggedId]     = useState(null)
+  const [activeFilter,      setActiveFilter]      = useState('all')
+  const [searchQuery,       setSearchQuery]       = useState('')
+  const [selectedClientId,  setSelectedClientId]  = useState(null)
+  const [draggedId,         setDraggedId]         = useState(null)
   const [dragOverDay,   setDragOverDay]   = useState(null)
   const [confirmModal,  setConfirmModal]  = useState(null)
   const [detailSession, setDetailSession] = useState(null)
@@ -464,6 +465,15 @@ export default function Schedule({
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   const weekEnd  = weekDays[6]
+
+  // ── Unique clients from sessions for the search dropdown ───────────────────
+  const sessionClients = useMemo(() => {
+    const seen = new Set()
+    return sessions
+      .filter(s => !s.isGroupClass && s.clientId && !seen.has(s.clientId) && seen.add(s.clientId))
+      .map(s => ({ id: s.clientId, name: s.clientName, avatarGrad: s.clientAvatarGrad, initials: s.clientInitials }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [sessions])
 
   // ── Filter helpers ─────────────────────────────────────────────────────────
   const filtered = sessions.filter(s => {
@@ -586,22 +596,19 @@ export default function Schedule({
         </div>
 
         <div className="schedule-header-right">
-          {/* ── Search bar (feature 3) ── */}
-          <div className="sched-search-wrap">
-            <Search size={13} />
-            <input
-              type="text"
-              className="sched-search-input"
-              placeholder="Search client…"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button className="sched-search-clear" onClick={() => setSearchQuery('')}>
-                <X size={12} />
-              </button>
-            )}
-          </div>
+          <SearchDropdown
+            items={sessionClients}
+            selectedId={selectedClientId}
+            onSelect={id => {
+              const client = sessionClients.find(c => c.id === id)
+              setSelectedClientId(id)
+              setSearchQuery(client?.name ?? '')
+            }}
+            onClear={() => { setSelectedClientId(null); setSearchQuery('') }}
+            placeholder="Search client…"
+            searchPlaceholder="Search clients…"
+            align="right"
+          />
 
           <div className="sched-week-nav">
             <button className="sched-week-btn" onClick={() => setWeekStart(d => addDays(d, -7))}>

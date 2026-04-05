@@ -1,10 +1,15 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   ArrowLeft, TrendingUp, Flame, Plus, Send,
   CheckCircle2, Clock, Calendar, ChevronLeft, ChevronRight,
 } from 'lucide-react'
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, Cell, PieChart, Pie,
+} from 'recharts'
 import { getClientById, getServiceConfig } from '../data/mockData'
 import { getClientExtras, getSessionExtras } from '../data/clientExtras'
+import { getProgressData, WEEK_LABELS } from '../data/progressData'
 import './ClientProfile.css'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -542,6 +547,413 @@ function MessageThread({ messages }) {
   )
 }
 
+// ── Progress tab ──────────────────────────────────────────────────────────────
+
+const PROG_RANGES = [
+  { id: '4w',  label: 'Last 4 weeks',  weeks: 4  },
+  { id: '8w',  label: 'Last 8 weeks',  weeks: 8  },
+  { id: '3m',  label: 'Last 3 months', weeks: 13 },
+  { id: 'all', label: 'All time',      weeks: 16 },
+]
+
+const CORAL = '#FF6B5B'
+const AMBER = '#FFA733'
+const TEAL  = '#2EC4A0'
+const NAVY  = '#2E2E4A'
+const GRID  = 'rgba(255,255,255,0.05)'
+
+function barColor(rate) {
+  if (rate >= 75) return TEAL
+  if (rate >= 50) return AMBER
+  return CORAL
+}
+
+function goalProgressPct(goal) {
+  const start = goal.progressHistory[0]?.value ?? goal.currentValue
+  if (goal.lowerIsBetter) {
+    const total = start - goal.targetValue
+    const done  = start - goal.currentValue
+    return Math.min(100, Math.max(0, Math.round((done / total) * 100)))
+  }
+  const total = goal.targetValue - start
+  const done  = goal.currentValue - start
+  return Math.min(100, Math.max(0, Math.round((done / total) * 100)))
+}
+
+function goalAccent(goal) {
+  if (goal.category === 'strength')       return TEAL
+  if (goal.category === 'cardio')         return AMBER
+  if (goal.category === 'rehabilitation') return CORAL
+  if (goal.lowerIsBetter)                 return CORAL
+  return TEAL
+}
+
+function makeDot(color, pbIdx, lowerIsBetter, allValues) {
+  const pb = lowerIsBetter ? Math.min(...allValues) : Math.max(...allValues)
+  return function Dot(props) {
+    const { cx, cy, index, payload, dataKey } = props
+    const val = payload[dataKey]
+    if (val == null) return null
+    const isPB = val === pb && index === pbIdx
+    if (isPB) {
+      return (
+        <g key={`pb-${dataKey}-${index}`}>
+          <circle cx={cx} cy={cy} r={11} fill={color} opacity={0.15} />
+          <circle cx={cx} cy={cy} r={5}  fill={color} />
+          <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="central"
+            fontSize={11} fill="#fff" fontWeight="bold"
+            style={{ pointerEvents: 'none', userSelect: 'none' }}>★</text>
+        </g>
+      )
+    }
+    return <circle key={`dot-${dataKey}-${index}`} cx={cx} cy={cy} r={3} fill={color} />
+  }
+}
+
+function StrengthTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="prog-tooltip">
+      <p className="prog-tooltip-label">{label}</p>
+      {payload.map(entry => (
+        <p key={entry.name} className="prog-tooltip-row" style={{ color: entry.color }}>
+          <span className="prog-tooltip-name">{entry.name.split(' (')[0]}</span>
+          <span className="prog-tooltip-val">{entry.value} {entry.name.match(/\((.+)\)/)?.[1]}</span>
+        </p>
+      ))}
+    </div>
+  )
+}
+
+function CompletionTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  const rate = payload[0]?.value
+  return (
+    <div className="prog-tooltip">
+      <p className="prog-tooltip-label">{label}</p>
+      <p className="prog-tooltip-row" style={{ color: barColor(rate) }}>
+        <span className="prog-tooltip-name">Completion</span>
+        <span className="prog-tooltip-val">{rate}%</span>
+      </p>
+    </div>
+  )
+}
+
+const GOAL_CATEGORIES = ['strength', 'cardio', 'weight', 'rehabilitation', 'other']
+
+function ProgressTab({ client }) {
+  const [rangeId,     setRangeId]     = useState('8w')
+  const [goals,       setGoals]       = useState(client.goals)
+  const [addingGoal,  setAddingGoal]  = useState(false)
+  const [newGoal,     setNewGoal]     = useState({
+    description: '', category: 'strength',
+    currentValue: '', targetValue: '', unit: '', targetDate: '',
+  })
+
+  const raw       = getProgressData(client.id)
+  const weekCount = PROG_RANGES.find(r => r.id === rangeId)?.weeks ?? 8
+
+  const { mergedData, exerciseMeta } = useMemo(() => {
+    const sliced = raw.exercises.map(ex => ({ ...ex, sliced: ex.data.slice(-weekCount) }))
+    const merged = sliced[0]?.sliced.map((_, i) => {
+      const row = { date: sliced[0].sliced[i].date }
+      sliced.forEach(ex => { row[`${ex.name} (${ex.unit})`] = ex.sliced[i]?.value ?? null })
+      return row
+    }) ?? []
+    const meta = sliced.map(ex => {
+      const values = ex.sliced.map(d => d.value)
+      const pb     = ex.lowerIsBetter ? Math.min(...values) : Math.max(...values)
+      let pbIdx = 0
+      values.forEach((v, i) => { if (v === pb) pbIdx = i })
+      return {
+        key: `${ex.name} (${ex.unit})`,
+        color: ex.color, lowerIsBetter: ex.lowerIsBetter,
+        pb, pbIdx, values,
+      }
+    })
+    return { mergedData: merged, exerciseMeta: meta }
+  }, [client.id, weekCount])
+
+  const weeklyCompletion = useMemo(
+    () => raw.weeklyCompletion.slice(-weekCount),
+    [client.id, weekCount],
+  )
+  const habits = useMemo(
+    () => raw.habits.map(h => ({ ...h, weeks: h.weeks.slice(-weekCount) })),
+    [client.id, weekCount],
+  )
+  const habitWeekLabels = WEEK_LABELS.slice(-weekCount)
+
+  const split        = raw.sessionsPerWeek
+  const totalPerWeek = split.trainer + split.independent
+  const splitData    = [
+    { name: 'With you', value: split.trainer     },
+    { name: 'Solo',     value: split.independent },
+  ]
+  const avgCompletion = weeklyCompletion.length
+    ? Math.round(weeklyCompletion.reduce((s, w) => s + w.rate, 0) / weeklyCompletion.length)
+    : 0
+
+  function handleAddGoal() {
+    if (!newGoal.description || !newGoal.currentValue || !newGoal.targetValue) return
+    const goal = {
+      id: `goal-new-${Date.now()}`,
+      description:    newGoal.description,
+      category:       newGoal.category,
+      targetValue:    parseFloat(newGoal.targetValue),
+      currentValue:   parseFloat(newGoal.currentValue),
+      unit:           newGoal.unit,
+      targetDate:     newGoal.targetDate || null,
+      createdAt:      new Date().toISOString().slice(0, 10),
+      lowerIsBetter:  false,
+      progressHistory: [{ date: new Date().toISOString().slice(0, 10), value: parseFloat(newGoal.currentValue) }],
+    }
+    setGoals(prev => [...prev, goal])
+    setAddingGoal(false)
+    setNewGoal({ description: '', category: 'strength', currentValue: '', targetValue: '', unit: '', targetDate: '' })
+  }
+
+  return (
+    <div className="prf-progress-tab">
+
+      {/* Range picker */}
+      <div className="prf-prog-range-row">
+        {PROG_RANGES.map(r => (
+          <button
+            key={r.id}
+            className={`prf-prog-range-btn${rangeId === r.id ? ' active' : ''}`}
+            onClick={() => setRangeId(r.id)}
+          >{r.label}</button>
+        ))}
+      </div>
+
+      {/* Goals */}
+      <section className="prog-section">
+        <div className="prog-section-head">
+          <h2 className="prog-section-title">Goals</h2>
+          <span className="prog-section-sub">{goals.length} active</span>
+          <button
+            className="prf-prog-add-btn"
+            onClick={() => setAddingGoal(o => !o)}
+          >
+            <Plus size={13} /> {addingGoal ? 'Cancel' : 'Add Goal'}
+          </button>
+        </div>
+
+        {addingGoal && (
+          <div className="prf-prog-add-goal-form">
+            <input
+              className="prf-prog-input"
+              placeholder="Goal description…"
+              value={newGoal.description}
+              onChange={e => setNewGoal(g => ({ ...g, description: e.target.value }))}
+            />
+            <div className="prf-prog-form-row">
+              <select
+                className="prf-prog-input"
+                value={newGoal.category}
+                onChange={e => setNewGoal(g => ({ ...g, category: e.target.value }))}
+              >
+                {GOAL_CATEGORIES.map(c => (
+                  <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                ))}
+              </select>
+              <input className="prf-prog-input" placeholder="Unit (kg, min…)"
+                value={newGoal.unit}
+                onChange={e => setNewGoal(g => ({ ...g, unit: e.target.value }))} />
+              <input className="prf-prog-input" type="number" placeholder="Current value"
+                value={newGoal.currentValue}
+                onChange={e => setNewGoal(g => ({ ...g, currentValue: e.target.value }))} />
+              <input className="prf-prog-input" type="number" placeholder="Target value"
+                value={newGoal.targetValue}
+                onChange={e => setNewGoal(g => ({ ...g, targetValue: e.target.value }))} />
+              <input className="prf-prog-input" type="date"
+                value={newGoal.targetDate}
+                onChange={e => setNewGoal(g => ({ ...g, targetDate: e.target.value }))} />
+            </div>
+            <button
+              className="prf-prog-save-btn"
+              onClick={handleAddGoal}
+              disabled={!newGoal.description || !newGoal.currentValue || !newGoal.targetValue}
+            >Save Goal</button>
+          </div>
+        )}
+
+        {goals.length > 0 ? (
+          <div className="prog-goals-grid">
+            {goals.map(goal => {
+              const pct    = goalProgressPct(goal)
+              const accent = goalAccent(goal)
+              const start  = goal.progressHistory[0]?.value ?? goal.currentValue
+              return (
+                <div key={goal.id} className="prog-goal-card">
+                  <div className="prog-goal-top">
+                    <p className="prog-goal-name">{goal.description}</p>
+                    <span className="prog-goal-pct" style={{ color: accent }}>{pct}%</span>
+                  </div>
+                  <div className="prog-goal-bar-track">
+                    <div className="prog-goal-bar-fill" style={{ width: `${pct}%`, background: accent }} />
+                  </div>
+                  <div className="prog-goal-footer">
+                    <span>Start: {start}{goal.unit ? ` ${goal.unit}` : ''}</span>
+                    <span className="prog-goal-current" style={{ color: accent }}>
+                      Now: {goal.currentValue}{goal.unit ? ` ${goal.unit}` : ''}
+                    </span>
+                    <span>Target: {goal.targetValue}{goal.unit ? ` ${goal.unit}` : ''}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : !addingGoal && (
+          <p className="prf-prog-empty">No goals set yet. Add one above.</p>
+        )}
+      </section>
+
+      {/* Strength progression */}
+      <section className="prog-section">
+        <div className="prog-section-head">
+          <h2 className="prog-section-title">Strength Progression</h2>
+          <span className="prog-section-sub">★ = personal best in range</span>
+        </div>
+        {exerciseMeta.length > 0 ? (
+          <div className="prog-card">
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={mergedData} margin={{ top: 12, right: 24, left: -8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID} />
+                <XAxis dataKey="date" tick={{ fill: '#9090B0', fontSize: 11 }} tickLine={false}
+                  axisLine={{ stroke: GRID }} interval="preserveStartEnd" />
+                <YAxis tick={{ fill: '#9090B0', fontSize: 11 }} tickLine={false} axisLine={false} width={36} />
+                <Tooltip content={<StrengthTooltip />} />
+                <Legend formatter={name => <span style={{ color: '#9090B0', fontSize: 12 }}>{name}</span>} />
+                {exerciseMeta.map(ex => (
+                  <Line key={ex.key} type="monotone" dataKey={ex.key} name={ex.key}
+                    stroke={ex.color} strokeWidth={2}
+                    dot={makeDot(ex.color, ex.pbIdx, ex.lowerIsBetter, ex.values)}
+                    activeDot={{ r: 5, fill: ex.color }}
+                    connectNulls />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="prf-prog-empty">No exercise data tracked yet.</p>
+        )}
+      </section>
+
+      {/* Completion + session split */}
+      <div className="prog-row-2col">
+        <section className="prog-section">
+          <div className="prog-section-head">
+            <h2 className="prog-section-title">Weekly Completion</h2>
+            <span className="prog-badge" style={{ background: `${barColor(avgCompletion)}22`, color: barColor(avgCompletion) }}>
+              avg {avgCompletion}%
+            </span>
+          </div>
+          <div className="prog-card">
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={weeklyCompletion} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
+                <XAxis dataKey="week" tick={{ fill: '#9090B0', fontSize: 11 }} tickLine={false}
+                  axisLine={{ stroke: GRID }} interval="preserveStartEnd" />
+                <YAxis domain={[0, 100]} tickFormatter={v => `${v}%`} tick={{ fill: '#9090B0', fontSize: 11 }}
+                  tickLine={false} axisLine={false} width={38} />
+                <Tooltip content={<CompletionTooltip />} />
+                <Bar dataKey="rate" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                  {weeklyCompletion.map((entry, i) => (
+                    <Cell key={i} fill={barColor(entry.rate)} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        <section className="prog-section">
+          <h2 className="prog-section-title">Session Split</h2>
+          <div className="prog-card prog-split-card">
+            {totalPerWeek > 0 ? (
+              <>
+                <div className="prog-donut-wrap">
+                  <ResponsiveContainer width="100%" height={190}>
+                    <PieChart>
+                      <Pie data={splitData} cx="50%" cy="50%" innerRadius={55} outerRadius={80}
+                        startAngle={90} endAngle={-270} dataKey="value" strokeWidth={0}>
+                        <Cell fill={CORAL} />
+                        <Cell fill={TEAL} />
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="prog-donut-center">
+                    <span className="prog-donut-total">{totalPerWeek}×</span>
+                    <span className="prog-donut-label">/ week</span>
+                  </div>
+                </div>
+                <div className="prog-split-legend">
+                  <div className="prog-split-legend-item">
+                    <span className="prog-split-dot" style={{ background: CORAL }} />
+                    <span className="prog-split-text"><strong>{split.trainer}</strong> with you</span>
+                  </div>
+                  <div className="prog-split-legend-item">
+                    <span className="prog-split-dot" style={{ background: TEAL }} />
+                    <span className="prog-split-text"><strong>{split.independent}</strong> solo</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <p className="prf-prog-empty">No session data.</p>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* Habit consistency */}
+      <section className="prog-section">
+        <div className="prog-section-head">
+          <h2 className="prog-section-title">Habit Consistency</h2>
+          <span className="prog-section-sub">week-by-week</span>
+        </div>
+        {habits.length > 0 ? (
+          <div className="prog-card prog-habit-card">
+            <div className="prog-habit-grid">
+              <div className="prog-habit-label-col" />
+              <div className="prog-habit-weeks-col">
+                {habitWeekLabels.map(w => (
+                  <span key={w} className="prog-habit-week-label">{w}</span>
+                ))}
+              </div>
+            </div>
+            {habits.map(habit => {
+              const doneCount = habit.weeks.filter(Boolean).length
+              const pct = Math.round((doneCount / habit.weeks.length) * 100)
+              return (
+                <div key={habit.name} className="prog-habit-grid prog-habit-row-grid">
+                  <div className="prog-habit-label-col">
+                    <span className="prog-habit-name">{habit.name}</span>
+                    <span className="prog-habit-pct"
+                      style={{ color: pct >= 75 ? TEAL : pct >= 50 ? AMBER : CORAL }}>{pct}%</span>
+                  </div>
+                  <div className="prog-habit-weeks-col">
+                    {habit.weeks.map((done, i) => (
+                      <div key={i} className="prog-habit-cell"
+                        style={{ background: done ? TEAL : NAVY, opacity: done ? 1 : 0.45 }}
+                        title={`${habitWeekLabels[i]}: ${done ? 'Completed' : 'Missed'}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="prf-prog-empty">No habit data for this client.</p>
+        )}
+      </section>
+
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function ClientProfile({ clientId, onBack, sessions = [], initialTab = 'overview' }) {
   const client = getClientById(clientId)
@@ -631,6 +1043,12 @@ export default function ClientProfile({ clientId, onBack, sessions = [], initial
         >
           Schedule
         </button>
+        <button
+          className={`prf-tab${activeTab === 'progress' ? ' prf-tab--active' : ''}`}
+          onClick={() => setActiveTab('progress')}
+        >
+          Progress
+        </button>
       </div>
 
       {/* ── Overview ── */}
@@ -664,6 +1082,11 @@ export default function ClientProfile({ clientId, onBack, sessions = [], initial
       {/* ── Schedule tab ── */}
       {activeTab === 'schedule' && (
         <ScheduleTab client={client} sessions={sessions} />
+      )}
+
+      {/* ── Progress tab ── */}
+      {activeTab === 'progress' && (
+        <ProgressTab client={client} />
       )}
     </div>
   )

@@ -137,6 +137,10 @@
   cursor: pointer;
 }
 
+/* Make SearchDropdown fill the field width */
+.nsess-field .sd-wrap { width: 100%; }
+.nsess-field .sd-trigger { width: 100%; box-sizing: border-box; }
+
 .nsess-row2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

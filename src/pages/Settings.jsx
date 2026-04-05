@@ -3,7 +3,9 @@ import {
   Plus, Trash2, Check, X, Camera, Calendar, Download,
   Bell, Sun, Moon, Clock, MessageSquare, BookOpen,
   Link2, Database, Briefcase, User, Pencil, FileText,
+  Upload, Dumbbell,
 } from 'lucide-react'
+import ImportModal from '../components/ImportModal'
 import './Settings.css'
 
 // ── Reusable helpers ──────────────────────────────────────────────────────────
@@ -45,7 +47,7 @@ function SectionHeader({ icon: Icon, title, desc, action }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function Settings({ sessionTypes, setSessionTypes }) {
+export default function Settings({ sessionTypes, setSessionTypes, onNavigate }) {
 
   // §1 Account & Profile
   const [profile, setProfile] = useState({
@@ -106,6 +108,9 @@ export default function Settings({ sessionTypes, setSessionTypes }) {
 
   // §8 Integrations
   const [googleConnected, setGoogleConnected] = useState(false)
+
+  // §9 Import modals
+  const [importModal, setImportModal] = useState(null) // null | 'clients' | 'exercises'
 
   // §10 Appearance
   const [darkMode, setDarkMode] = useState(true)
@@ -574,6 +579,23 @@ export default function Settings({ sessionTypes, setSessionTypes }) {
           </div>
         </div>
 
+        {/* Client import */}
+        <div className="s-import-block s-import-block--action">
+          <div className="s-import-block-left">
+            <div className="s-import-block-icon"><Upload size={15} /></div>
+            <div>
+              <div className="s-import-block-title">Import Clients from CSV</div>
+              <div className="s-import-block-desc">
+                Bulk-add clients from a spreadsheet. Accepts First Name, Last Name, Email, Phone, Service Type, Notes.
+              </div>
+            </div>
+          </div>
+          <button className="s-import-action-btn" onClick={() => setImportModal('clients')}>
+            <Upload size={13} /> Import Clients
+          </button>
+        </div>
+
+        {/* Platform import coming soon */}
         <div className="s-import-block">
           <div className="s-import-header">
             <span className="s-import-title">Import from another platform</span>
@@ -584,6 +606,28 @@ export default function Settings({ sessionTypes, setSessionTypes }) {
               <span key={name} className="s-import-chip">{name}</span>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── §9b Exercise Library Import ───────────────────────────────────────── */}
+      <section className="settings-section">
+        <SectionHeader icon={Dumbbell} title="Exercise Library"
+          desc="Import your exercise library from a CSV to populate sets, reps, muscle groups, and more." />
+
+        <div className="s-import-block s-import-block--action">
+          <div className="s-import-block-left">
+            <div className="s-import-block-icon s-import-block-icon--teal"><Dumbbell size={15} /></div>
+            <div>
+              <div className="s-import-block-title">Import Exercise Library from CSV</div>
+              <div className="s-import-block-desc">
+                Accepts Name, Description, Muscle Group, Sets, Reps, Video URL.
+                Video and image bulk upload coming soon.
+              </div>
+            </div>
+          </div>
+          <button className="s-import-action-btn s-import-action-btn--teal" onClick={() => setImportModal('exercises')}>
+            <Upload size={13} /> Import Exercises
+          </button>
         </div>
       </section>
 
@@ -601,6 +645,15 @@ export default function Settings({ sessionTypes, setSessionTypes }) {
           <Toggle checked={darkMode} onChange={setDarkMode} />
         </div>
       </section>
+
+      {/* ── Import modals ─────────────────────────────────────────────────────── */}
+      {importModal && (
+        <ImportModal
+          type={importModal}
+          onClose={() => setImportModal(null)}
+          onGoToClients={() => { setImportModal(null); onNavigate?.('clients') }}
+        />
+      )}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Plus, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { clients, getActiveClients } from '../data/mockData'
+import SearchDropdown from './SearchDropdown'
 import './NewSessionPanel.css'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -182,27 +183,27 @@ export default function NewSessionPanel({ sessions, setSessions, sessionTypes, o
             ) : (
               <div className="nsess-field">
                 <label>Client</label>
-                <select
-                  value={form.clientId}
-                  onChange={e => set('clientId', e.target.value)}
-                  required
-                >
-                  <option value="">Select a client…</option>
-                  {activeClients.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <SearchDropdown
+                  items={activeClients.map(c => ({ id: c.id, name: c.name, avatarGrad: c.avatarGrad, initials: c.initials }))}
+                  selectedId={form.clientId || null}
+                  onSelect={id => set('clientId', id)}
+                  onClear={() => set('clientId', '')}
+                  placeholder="Select a client…"
+                  searchPlaceholder="Search clients…"
+                />
               </div>
             )}
 
             <div className="nsess-field">
               <label>Session type</label>
-              <select value={form.sessionType} onChange={e => set('sessionType', e.target.value)}>
-                <option value="">— none —</option>
-                {sessionTypes.map(st => (
-                  <option key={st.id} value={st.label}>{st.label}</option>
-                ))}
-              </select>
+              <SearchDropdown
+                items={sessionTypes.map(st => ({ id: st.label, name: st.label, color: st.color }))}
+                selectedId={form.sessionType || null}
+                onSelect={val => set('sessionType', val)}
+                onClear={() => set('sessionType', '')}
+                placeholder="Select a type…"
+                searchPlaceholder="Search types…"
+              />
             </div>
 
             <div className="nsess-row2">

@@ -103,6 +103,96 @@
   background: rgba(255, 107, 107, 0.08);
 }
 
+/* ── Expandable nav item (Clients) ───────────────────────────────────────── */
+
+.nav-item--expandable {
+  /* chevron sits at the end via margin-left: auto on the icon */
+}
+
+.nav-chevron {
+  margin-left: auto;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.nav-chevron--open {
+  transform: rotate(180deg);
+}
+
+/* ── Sub-nav list ────────────────────────────────────────────────────────── */
+
+.nav-sub-list {
+  list-style: none;
+  margin: 2px 0 4px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.nav-sub-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px 5px 40px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  font-family: inherit;
+}
+
+.nav-sub-item:hover {
+  background: var(--navy-lighter);
+  color: var(--text-secondary);
+}
+
+.nav-sub-label {
+  flex: 1;
+}
+
+.nav-sub-count {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.nav-sub-item:hover .nav-sub-count {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--text-secondary);
+}
+
+.nav-sub-item--amber:hover {
+  color: #FFA733;
+}
+
+.nav-sub-item--amber:hover .nav-sub-count {
+  background: rgba(255, 167, 51, 0.15);
+  color: #FFA733;
+}
+
+.nav-sub-item--red:hover {
+  color: #FF6B5B;
+}
+
+.nav-sub-item--red:hover .nav-sub-count {
+  background: rgba(255, 107, 91, 0.15);
+  color: #FF6B5B;
+}
+
 .sidebar-bottom {
   padding: 12px;
   border-top: 1px solid var(--border);
@@ -209,6 +299,10 @@
   /* Hide text labels — icons only */
   .nav-item span { display: none; }
   .nav-badge { display: none; }
+
+  /* Hide sub-nav on mobile */
+  .nav-sub-list { display: none; }
+  .nav-chevron  { display: none; }
 
   .nav-item.active {
     background: transparent;
