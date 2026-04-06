@@ -8,6 +8,7 @@ import Settings from './pages/Settings'
 import Reports from './pages/Reports'
 import Progress from './pages/Progress'
 import MessagesPage from './pages/Messages'
+import Programs from './pages/Programs'
 import NewSessionPanel from './components/NewSessionPanel'
 import { scheduleSessions } from './data/scheduleData'
 import { defaultSessionTypes } from './data/sessionTypes'
@@ -43,7 +44,7 @@ export default function App() {
     setActivePage('clients')
   }
 
-  const knownPages = ['dashboard', 'clients', 'schedule', 'settings', 'reports', 'messages', 'progress']
+  const knownPages = ['dashboard', 'clients', 'schedule', 'settings', 'reports', 'messages', 'progress', 'programs']
 
   return (
     <div className="app-layout">
@@ -102,6 +103,10 @@ export default function App() {
 
         {activePage === 'progress' && (
           <Progress />
+        )}
+
+        {activePage === 'programs' && (
+          <Programs />
         )}
 
         {activePage === 'messages' && (

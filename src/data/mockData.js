@@ -72,6 +72,8 @@ export const clients = [
     status: 'active',
     startDate: '2025-01-15',
 
+    healthConditions: ['Work-related stress', 'Sleep disruption'],
+
     attentionFlag: {
       issue: 'Missed 3 workouts this week',
       tag: 'Overdue',
@@ -414,6 +416,8 @@ export const clients = [
     status: 'active',
     startDate: '2025-11-01',
 
+    healthConditions: ['Shoulder impingement syndrome', 'Post rotator cuff repair (2023)'],
+
     attentionFlag: null,
     nextSession: '2026-04-04',
     lastSeen: '3 days ago',
@@ -466,6 +470,8 @@ export const clients = [
     serviceType: 'physiotherapist',
     status: 'active',
     startDate: '2026-01-10',
+
+    healthConditions: ['L4-L5 disc herniation', 'Previous lower back surgery (2024)'],
 
     attentionFlag: null,
     nextSession: '2026-04-03',
@@ -521,6 +527,8 @@ export const clients = [
     serviceType: 'physiotherapist',
     status: 'active',
     startDate: '2025-08-20',
+
+    healthConditions: ['Post-ACL reconstruction (August 2025)'],
 
     attentionFlag: null,
     nextSession: '2026-04-07',
@@ -618,6 +626,8 @@ export const clients = [
     serviceType: 'massage_therapist',
     status: 'active',
     startDate: '2025-07-15',
+
+    healthConditions: ['Suspected IT band syndrome', 'Lateral knee pain on long runs'],
 
     attentionFlag: {
       issue: 'Reported knee pain in last log',
