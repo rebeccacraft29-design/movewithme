@@ -65,7 +65,7 @@ export default function Dashboard({ onNavigateToClients, onSelectClient, onNavig
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
+      <header id="tour-dashboard" className="dashboard-header">
         <div>
           <p className="dashboard-date">{dateStr}</p>
           <h1 className="dashboard-greeting">Good morning, Rebecca 👋</h1>
@@ -81,10 +81,12 @@ export default function Dashboard({ onNavigateToClients, onSelectClient, onNavig
 
       <div className="dashboard-panels">
         <div className="panels-left">
-          <NeedsAttentionPanel
-            onSelectClient={onSelectClient}
-            onViewAll={() => onNavigateToClients?.('attention')}
-          />
+          <div id="tour-attention">
+            <NeedsAttentionPanel
+              onSelectClient={onSelectClient}
+              onViewAll={() => onNavigateToClients?.('attention')}
+            />
+          </div>
           <SmartInsightsPanel onNavigate={onNavigate} />
         </div>
         <div className="panels-right">

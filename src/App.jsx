@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import Landing from './pages/auth/Landing'
+import Login from './pages/auth/Login'
+import Onboarding from './pages/onboarding/Onboarding'
 import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
 import ClientsPage from './pages/Clients'
@@ -10,12 +13,19 @@ import Progress from './pages/Progress'
 import MessagesPage from './pages/Messages'
 import Programs from './pages/Programs'
 import NewSessionPanel from './components/NewSessionPanel'
+import GuidedTour from './components/GuidedTour'
 import { scheduleSessions } from './data/scheduleData'
 import { defaultSessionTypes } from './data/sessionTypes'
 import { initialConversations } from './data/messagesData'
 import './App.css'
 
+// appScreen: 'landing' | 'login' | 'onboarding' | 'app'
+
 export default function App() {
+  const [appScreen,      setAppScreen]      = useState('landing')
+  const [userProfile,    setUserProfile]    = useState(null)
+  const [showTour,       setShowTour]       = useState(false)
+
   const [activePage,      setActivePage]      = useState('dashboard')
   const [activeClientId,  setActiveClientId]  = useState(null)
   const [activeClientTab, setActiveClientTab] = useState('overview')
@@ -26,6 +36,42 @@ export default function App() {
   const [conversations,   setConversations]   = useState(initialConversations)
 
   const unreadMessages = conversations.reduce((sum, c) => sum + c.unreadCount, 0)
+
+  function handleSignUp(data) {
+    setAppScreen('onboarding')
+  }
+
+  function handleLogin(data) {
+    // Mock login — go straight to dashboard
+    setUserProfile({ firstName: 'Rebecca' })
+    setActivePage('dashboard')
+    setAppScreen('app')
+  }
+
+  function handleOnboardingComplete(profile) {
+    setUserProfile(profile)
+    if (profile.startAction === 'tour') {
+      setActivePage('dashboard')
+      setAppScreen('app')
+      // Small delay so dashboard is mounted before tour starts
+      setTimeout(() => setShowTour(true), 300)
+    } else if (profile.startAction === 'clients') {
+      setActivePage('clients')
+      setAppScreen('app')
+    } else if (profile.startAction === 'programs') {
+      setActivePage('programs')
+      setAppScreen('app')
+    } else {
+      setActivePage('dashboard')
+      setAppScreen('app')
+    }
+  }
+
+  function handleLogout() {
+    setUserProfile(null)
+    setActivePage('dashboard')
+    setAppScreen('landing')
+  }
 
   function handleNavigate(page) {
     setActivePage(page)
@@ -44,6 +90,36 @@ export default function App() {
     setActivePage('clients')
   }
 
+  // ── Auth / onboarding screens (no sidebar) ──────────────────────────────
+
+  if (appScreen === 'landing') {
+    return (
+      <Landing
+        onSignUp={handleSignUp}
+        onLogin={() => setAppScreen('login')}
+      />
+    )
+  }
+
+  if (appScreen === 'login') {
+    return (
+      <Login
+        onLogin={handleLogin}
+        onSignUp={() => setAppScreen('landing')}
+      />
+    )
+  }
+
+  if (appScreen === 'onboarding') {
+    return (
+      <Onboarding
+        onComplete={handleOnboardingComplete}
+      />
+    )
+  }
+
+  // ── Main app ─────────────────────────────────────────────────────────────
+
   const knownPages = ['dashboard', 'clients', 'schedule', 'settings', 'reports', 'messages', 'progress', 'programs']
 
   return (
@@ -51,6 +127,7 @@ export default function App() {
       <Sidebar
         activePage={activePage}
         onNavigate={handleNavigate}
+        onLogout={handleLogout}
         unreadMessages={unreadMessages}
       />
 
@@ -97,17 +174,9 @@ export default function App() {
           />
         )}
 
-        {activePage === 'reports' && (
-          <Reports />
-        )}
-
-        {activePage === 'progress' && (
-          <Progress />
-        )}
-
-        {activePage === 'programs' && (
-          <Programs />
-        )}
+        {activePage === 'reports'  && <Reports />}
+        {activePage === 'progress' && <Progress />}
+        {activePage === 'programs' && <Programs />}
 
         {activePage === 'messages' && (
           <MessagesPage
@@ -126,6 +195,7 @@ export default function App() {
 
       {/* ── Global floating action button ── */}
       <button
+        id="tour-fab"
         className="global-fab"
         onClick={() => setNewSessionOpen(true)}
         title="New session"
@@ -142,6 +212,11 @@ export default function App() {
           sessionTypes={sessionTypes}
           onClose={() => setNewSessionOpen(false)}
         />
+      )}
+
+      {/* ── Guided tour ── */}
+      {showTour && (
+        <GuidedTour onEnd={() => setShowTour(false)} />
       )}
     </div>
   )

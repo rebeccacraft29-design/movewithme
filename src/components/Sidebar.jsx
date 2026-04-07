@@ -28,7 +28,7 @@ const bottomItems = [
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
-export default function Sidebar({ activePage, onNavigate, unreadMessages = 0 }) {
+export default function Sidebar({ activePage, onNavigate, onLogout, unreadMessages = 0 }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -54,6 +54,7 @@ export default function Sidebar({ activePage, onNavigate, unreadMessages = 0 }) 
           {/* Clients */}
           <li>
             <button
+              id="tour-clients"
               className={`nav-item ${activePage === 'clients' ? 'active' : ''}`}
               onClick={() => onNavigate('clients')}
             >
@@ -68,6 +69,7 @@ export default function Sidebar({ activePage, onNavigate, unreadMessages = 0 }) 
             return (
               <li key={id}>
                 <button
+                  id={id === 'programs' ? 'tour-programs' : undefined}
                   className={`nav-item ${activePage === id ? 'active' : ''}`}
                   onClick={() => onNavigate(id)}
                 >
@@ -95,7 +97,7 @@ export default function Sidebar({ activePage, onNavigate, unreadMessages = 0 }) 
             </li>
           ))}
           <li>
-            <button className="nav-item nav-item--logout">
+            <button className="nav-item nav-item--logout" onClick={onLogout}>
               <LogOut size={18} />
               <span>Log out</span>
             </button>
