@@ -7,8 +7,9 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, Cell, PieChart, Pie,
 } from 'recharts'
-import { getClientById, getServiceConfig } from '../data/mockData'
-import { getClientExtras, getSessionExtras } from '../data/clientExtras'
+import { getServiceConfig } from '../data/mockData'
+import { useAuth } from '../context/AuthContext'
+import { getClientById, getClientExtras } from '../lib/db'
 import { getProgressData, WEEK_LABELS } from '../data/progressData'
 import './ClientProfile.css'
 
@@ -385,7 +386,6 @@ function SessionsSection({ client, svcConfig }) {
       </div>
       <div className="prf-sessions">
         {all.map(s => {
-          const extras = getSessionExtras(s.id)
           return (
             <div key={s.id} className={`prf-session${!s.completed ? ' prf-session--missed' : ''}`}>
               <div className="prf-session-left">
@@ -408,12 +408,9 @@ function SessionsSection({ client, svcConfig }) {
               <div className="prf-session-right">
                 <span className="prf-session-date">{formatSessionDate(s.date)}</span>
                 <div className="prf-session-badges">
-                  {extras.heavierThanPrescribed && client.serviceType === 'personal_trainer' && (
-                    <span className="prf-badge prf-badge--heavier" title="Heavier than prescribed">↑ Heavier</span>
-                  )}
-                  {extras.rating && (
-                    <span className="prf-badge prf-badge--rating" title={`${extras.rating}/5`}>
-                      {RATING_EMOJI[extras.rating]}
+                  {s.rating && (
+                    <span className="prf-badge prf-badge--rating" title={`${s.rating}/5`}>
+                      {RATING_EMOJI[s.rating]}
                     </span>
                   )}
                 </div>
@@ -956,8 +953,33 @@ function ProgressTab({ client }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function ClientProfile({ clientId, onBack, sessions = [], initialTab = 'overview' }) {
-  const client = getClientById(clientId)
+  const { trainer } = useAuth()
+  const [client,    setClient]    = useState(null)
+  const [extras,    setExtras]    = useState({ plansCompleted: 0, notes: [], messages: [], weeklyHabits: [] })
+  const [loading,   setLoading]   = useState(true)
   const [activeTab, setActiveTab] = useState(initialTab)
+
+  useEffect(() => {
+    if (!trainer?.id || !clientId) return
+    setLoading(true)
+    Promise.all([
+      getClientById(trainer.id, clientId),
+      getClientExtras(trainer.id, clientId),
+    ]).then(([c, ex]) => {
+      setClient(c)
+      if (ex) setExtras(ex)
+      setLoading(false)
+    })
+  }, [trainer?.id, clientId])
+
+  if (loading) return (
+    <div className="profile-page">
+      <button className="profile-back" onClick={onBack}>
+        <ArrowLeft size={16} /> Back to Clients
+      </button>
+      <p style={{ color: 'var(--text-muted)', marginTop: 32 }}>Loading…</p>
+    </div>
+  )
 
   if (!client) return (
     <div className="profile-page">
@@ -969,7 +991,6 @@ export default function ClientProfile({ clientId, onBack, sessions = [], initial
   )
 
   const svcConfig  = getServiceConfig(client.serviceType)
-  const extras     = getClientExtras(client.id)
   const badgeStyle = SERVICE_BADGE[client.serviceType] ?? SERVICE_BADGE.other
 
   const thisWeek = getThisWeekCompletion(client)

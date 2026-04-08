@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Paperclip, Send, ArrowLeft, MessageSquare, X, ChevronRight } from 'lucide-react'
-import { clients, getServiceConfig } from '../data/mockData'
+import { getServiceConfig } from '../data/mockData'
+import { useAuth } from '../context/AuthContext'
+import { getConversations, sendMessage, markConversationRead, getActiveClients, getAvatarGrad } from '../lib/db'
 import SearchDropdown from '../components/SearchDropdown'
 import './Messages.css'
 
@@ -14,10 +16,13 @@ const SERVICE_COLORS = {
   other:             { bg: 'rgba(144,144,176,0.12)', color: '#9090B0' },
 }
 
-const TRAINER = {
-  id: 'trainer-1',
-  initials: 'RC',
-  avatarGrad: 'linear-gradient(135deg,#FF6B5B,#FFA733)',
+function trainerMeta(trainer) {
+  const name = trainer?.full_name ?? ''
+  const parts = name.trim().split(/\s+/)
+  const initials = parts.length >= 2
+    ? parts[0][0] + parts[parts.length - 1][0]
+    : (parts[0]?.[0] ?? '?')
+  return { id: 'trainer-1', initials: initials.toUpperCase(), avatarGrad: getAvatarGrad(name) }
 }
 
 // ─── Time helpers ──────────────────────────────────────────────────────────────
@@ -261,10 +266,10 @@ function DetailDrawer({ type, client, onClose }) {
 
 // ─── MessageBubble ─────────────────────────────────────────────────────────────
 
-function MessageBubble({ message, client, onToggleLike }) {
+function MessageBubble({ message, client, trainerInitials, trainerAvatarGrad, onToggleLike }) {
   const isSent = message.senderId === 'trainer-1'
-  const avatarGrad = isSent ? TRAINER.avatarGrad : client.avatarGrad
-  const initials   = isSent ? TRAINER.initials   : client.initials
+  const avatarGrad = isSent ? trainerAvatarGrad : client.avatarGrad
+  const initials   = isSent ? trainerInitials   : client.initials
 
   return (
     <div className={`message-group ${isSent ? 'sent' : 'received'}`}>
@@ -298,7 +303,12 @@ function MessageBubble({ message, client, onToggleLike }) {
 
 // ─── MessagesPage ──────────────────────────────────────────────────────────────
 
-export default function MessagesPage({ conversations, setConversations }) {
+export default function MessagesPage() {
+  const { trainer } = useAuth()
+  const TRAINER = trainerMeta(trainer)
+
+  const [conversations,  setConversations]  = useState([])
+  const [clients,        setClients]        = useState([])
   const [selectedClientId, setSelectedClientId] = useState(null)
   const [mobileView,       setMobileView]       = useState('inbox') // 'inbox' | 'thread'
   const [inputText,        setInputText]        = useState('')
@@ -308,6 +318,18 @@ export default function MessagesPage({ conversations, setConversations }) {
 
   const messageListRef = useRef(null)
   const textareaRef    = useRef(null)
+
+  // Load conversations and clients
+  useEffect(() => {
+    if (!trainer?.id) return
+    Promise.all([
+      getConversations(trainer.id),
+      getActiveClients(trainer.id),
+    ]).then(([convs, cls]) => {
+      setConversations(convs)
+      setClients(cls)
+    })
+  }, [trainer?.id])
 
   const selectedClient       = selectedClientId ? clients.find(c => c.id === selectedClientId) : null
   const selectedConversation = selectedClientId
@@ -340,48 +362,39 @@ export default function MessagesPage({ conversations, setConversations }) {
     setInputText('')
     setLinkInputOpen(false)
     setLinkUrl('')
-
-    // Mark all client messages as read
     setActiveDrawer(null)
+
+    // Mark as read locally
     setConversations(prev =>
       prev.map(conv =>
         conv.clientId === clientId
-          ? {
-              ...conv,
-              unreadCount: 0,
-              messages: conv.messages.map(m => ({ ...m, read: true })),
-            }
+          ? { ...conv, unreadCount: 0, messages: conv.messages.map(m => ({ ...m, read: true })) }
           : conv
       )
     )
+    // Mark as read in DB
+    if (trainer?.id) markConversationRead(trainer.id, clientId)
   }
 
-  function handleSend() {
+  async function handleSend() {
     const text = inputText.trim()
-    if (!text || !selectedClientId) return
-
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      senderId: 'trainer-1',
-      text,
-      timestamp: new Date().toISOString(),
-      read: false,
-      likeCount: 0,
-      liked: false,
-    }
-
-    setConversations(prev =>
-      prev.map(conv =>
-        conv.clientId === selectedClientId
-          ? { ...conv, lastMessageAt: newMsg.timestamp, messages: [...conv.messages, newMsg] }
-          : conv
-      )
-    )
+    if (!text || !selectedClientId || !trainer?.id) return
 
     setInputText('')
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+
+    try {
+      const newMsg = await sendMessage(trainer.id, selectedClientId, text)
+      setConversations(prev =>
+        prev.map(conv =>
+          conv.clientId === selectedClientId
+            ? { ...conv, lastMessageAt: newMsg.timestamp, messages: [...conv.messages, newMsg] }
+            : conv
+        )
+      )
+    } catch {
+      // restore text on failure
+      setInputText(text)
     }
   }
 
@@ -502,6 +515,8 @@ export default function MessagesPage({ conversations, setConversations }) {
                   key={msg.id}
                   message={msg}
                   client={selectedClient}
+                  trainerInitials={TRAINER.initials}
+                  trainerAvatarGrad={TRAINER.avatarGrad}
                   onToggleLike={() => handleToggleLike(selectedClient.id, msg.id)}
                 />
               ))}

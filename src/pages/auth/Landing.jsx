@@ -1,15 +1,69 @@
 import { useState } from 'react'
 import { Zap, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 import './Auth.css'
 
 export default function Landing({ onSignUp, onLogin }) {
+  const { signUp, signInWithGoogle } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email,        setEmail]        = useState('')
+  const [password,     setPassword]     = useState('')
+  const [error,        setError]        = useState(null)
+  const [loading,      setLoading]      = useState(false)
+  const [emailSent,    setEmailSent]    = useState(false)
 
-  function handleEmailSignUp(e) {
+  async function handleEmailSignUp(e) {
     e.preventDefault()
-    onSignUp({ method: 'email', email })
+    setError(null)
+    setLoading(true)
+    try {
+      const { session } = await signUp(email, password)
+      if (!session) {
+        // Email confirmation required
+        setEmailSent(true)
+      } else {
+        onSignUp()
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGoogle() {
+    try {
+      await signInWithGoogle()
+      // Redirect happens automatically
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  if (emailSent) {
+    return (
+      <div className="auth-page">
+        <div className="auth-bg">
+          <div className="auth-blob auth-blob-1" />
+          <div className="auth-blob auth-blob-2" />
+          <div className="auth-blob auth-blob-3" />
+        </div>
+        <div className="auth-card auth-card-centered">
+          <div className="auth-logo">
+            <div className="auth-logo-icon"><Zap size={22} /></div>
+            <span className="auth-logo-text">MoveWithMe</span>
+          </div>
+          <h1 className="auth-card-title">Check your email</h1>
+          <p className="auth-card-sub">
+            We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account and continue to onboarding.
+          </p>
+          <p className="auth-switch">
+            Already confirmed?{' '}
+            <button type="button" onClick={onLogin}>Log in</button>
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -49,7 +103,7 @@ export default function Landing({ onSignUp, onLogin }) {
           <h1 className="auth-card-title">Create your free account</h1>
           <p className="auth-card-sub">No credit card required. Up and running in minutes.</p>
 
-          <button className="btn-google" onClick={() => onSignUp({ method: 'google' })}>
+          <button className="btn-google" onClick={handleGoogle} disabled={loading}>
             <GoogleIcon />
             Continue with Google
           </button>
@@ -75,6 +129,7 @@ export default function Landing({ onSignUp, onLogin }) {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
               <button
                 type="button"
@@ -85,7 +140,10 @@ export default function Landing({ onSignUp, onLogin }) {
                 {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
-            <button type="submit" className="btn-primary-auth">Create free account</button>
+            {error && <p className="auth-error">{error}</p>}
+            <button type="submit" className="btn-primary-auth" disabled={loading}>
+              {loading ? 'Creating account…' : 'Create free account'}
+            </button>
           </form>
 
           <p className="auth-switch">

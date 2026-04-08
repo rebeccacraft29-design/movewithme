@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Copy, Edit2, LayoutTemplate, FileText, Layers, X, ChevronRight, Users } from 'lucide-react'
-import { clients, getServiceConfig, getClientById } from '../data/mockData'
-import { initialPrograms, exerciseLibrary, uid, getExerciseName } from '../data/programsData'
-import { clientProgramLogs } from '../data/clientProgramLogs'
+import { getServiceConfig } from '../data/mockData'
+import { exerciseLibrary, uid, getExerciseName } from '../data/programsData'
+import { useAuth } from '../context/AuthContext'
+import { getPrograms, saveProgram, deleteProgram, getClients, getClientProgramLogs } from '../lib/db'
 import ProgramDetail from './ProgramDetail'
 import './Programs.css'
 
@@ -14,10 +15,7 @@ function deepCloneProgram(program) {
 }
 
 function getClientCount(program) {
-  const logs = clientProgramLogs[program.id]
-  if (logs?.assignedClientIds?.length) return logs.assignedClientIds.length
-  if (program.clientId) return 1
-  return 0
+  return program._clientCount ?? 0
 }
 
 const STATUS_SORT_ORDER = { active: 0, draft: 1, template: 2, completed: 3 }
@@ -201,7 +199,7 @@ function TemplatePicker({ templates, onSelect, onClose }) {
 
 // ── Copy from existing modal ──────────────────────────────────────────────────
 
-function CopyExistingPicker({ programs, onSelect, onClose }) {
+function CopyExistingPicker({ programs, clients, onSelect, onClose }) {
   const clientPrograms = programs.filter(p => !p.isTemplate)
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -215,7 +213,7 @@ function CopyExistingPicker({ programs, onSelect, onClose }) {
         </div>
         <div className="copy-picker-list">
           {clientPrograms.map(p => {
-            const client = p.clientId ? getClientById(p.clientId) : null
+            const client = p._clientId ? clients.find(c => c.id === p._clientId) : null
             const cfg = getServiceConfig(p.serviceType)
             const status = STATUS_CONFIG[p.status] ?? STATUS_CONFIG.draft
             return (
@@ -309,11 +307,27 @@ const FILTERS = [
 // ── Main Programs page ────────────────────────────────────────────────────────
 
 export default function Programs() {
-  const [programs, setPrograms]           = useState(initialPrograms)
-  const [view, setView]                   = useState('list')       // 'list' | 'detail'
+  const { trainer } = useAuth()
+  const [programs,      setPrograms]      = useState([])
+  const [clients,       setClients]       = useState([])
+  const [clientLogs,    setClientLogs]    = useState({})
+  const [view,          setView]          = useState('list')
   const [editingProgram, setEditingProgram] = useState(null)
-  const [filter, setFilter]               = useState('all')
-  const [modal, setModal]                 = useState(null)         // null | 'new' | 'template' | 'copy'
+  const [filter,        setFilter]        = useState('all')
+  const [modal,         setModal]         = useState(null)
+
+  useEffect(() => {
+    if (!trainer?.id) return
+    Promise.all([
+      getPrograms(trainer.id),
+      getClients(trainer.id),
+      getClientProgramLogs(trainer.id),
+    ]).then(([progs, cls, logs]) => {
+      setPrograms(progs)
+      setClients(cls)
+      setClientLogs(logs)
+    })
+  }, [trainer?.id])
 
   // ── Filtering ──────────────────────────────────────────────────────────────
 
@@ -345,26 +359,29 @@ export default function Programs() {
     setModal(null)
   }
 
-  function handleSave(updatedProgram) {
-    setPrograms(prev => {
-      const exists = prev.find(p => p.id === updatedProgram.id)
-      if (exists) {
-        return prev.map(p => p.id === updatedProgram.id ? updatedProgram : p)
-      }
-      return [...prev, updatedProgram]
-    })
-    setView('list')
-    setEditingProgram(null)
+  async function handleSave(updatedProgram) {
+    try {
+      const saved = await saveProgram(trainer.id, updatedProgram)
+      setPrograms(prev => {
+        const exists = prev.find(p => p.id === updatedProgram.id || p._dbId === updatedProgram._dbId)
+        if (exists) return prev.map(p => (p.id === updatedProgram.id || p._dbId === updatedProgram._dbId) ? saved : p)
+        return [...prev, saved]
+      })
+      setView('list')
+      setEditingProgram(null)
+    } catch (err) {
+      console.error('Save program failed:', err)
+    }
   }
 
-  function handleDuplicate(program) {
+  async function handleDuplicate(program) {
     const copy = deepCloneProgram(program)
-    copy.id   = uid()
+    copy._dbId = null
     copy.name = program.name + ' (Copy)'
     copy.status = 'draft'
     copy.isTemplate = false
     copy.startDate = ''
-    // Re-ID all weeks/days/exercises
+    copy.clientId = null
     copy.weeks = copy.weeks.map(w => ({
       ...w, id: uid(),
       days: w.days.map(d => ({
@@ -372,7 +389,12 @@ export default function Programs() {
         exercises: d.exercises.map(e => ({ ...e, id: uid() })),
       })),
     }))
-    setPrograms(prev => [...prev, copy])
+    try {
+      const saved = await saveProgram(trainer.id, copy)
+      setPrograms(prev => [...prev, saved])
+    } catch (err) {
+      console.error('Duplicate program failed:', err)
+    }
   }
 
   function handleNewScratch() {
@@ -411,7 +433,7 @@ export default function Programs() {
         program={editingProgram}
         clients={clients}
         exerciseLibrary={exerciseLibrary}
-        clientLogs={clientProgramLogs}
+        clientLogs={clientLogs}
         onSave={handleSave}
         onBack={() => { setView('list'); setEditingProgram(null) }}
       />
@@ -486,6 +508,7 @@ export default function Programs() {
       {modal === 'copy' && (
         <CopyExistingPicker
           programs={programs}
+          clients={clients}
           onSelect={handleCopyExisting}
           onClose={() => setModal(null)}
         />

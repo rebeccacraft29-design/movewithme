@@ -1,8 +1,5 @@
 import { Calendar, ArrowRight, RefreshCw } from 'lucide-react'
-import { getClientsWithEndingPlans } from '../../data/mockData'
 import './PlansEndingSoonPanel.css'
-
-const plans = getClientsWithEndingPlans(7)
 
 function urgencyColor(days) {
   if (days <= 3) return { color: '#FF6B5B', bg: 'rgba(255,107,91,0.12)' }
@@ -10,7 +7,7 @@ function urgencyColor(days) {
   return { color: '#2EC4A0', bg: 'rgba(46,196,160,0.12)' }
 }
 
-export default function PlansEndingSoonPanel({ onSelectClient }) {
+export default function PlansEndingSoonPanel({ clients = [], loading = false, onSelectClient }) {
   return (
     <div className="panel">
       <div className="panel-header">
@@ -21,14 +18,15 @@ export default function PlansEndingSoonPanel({ onSelectClient }) {
       </div>
 
       <div className="plans-list">
-        {plans.map((client) => {
+        {loading && <p className="panel-loading">Loading…</p>}
+        {!loading && clients.length === 0 && (
+          <p className="panel-empty">No plans ending within 7 days.</p>
+        )}
+        {!loading && clients.map((client) => {
           const urgency = urgencyColor(client.currentPlan.daysLeft)
           return (
             <div key={client.id} className="plan-item">
-              <div
-                className="plan-avatar"
-                style={{ background: client.avatarGrad }}
-              >
+              <div className="plan-avatar" style={{ background: client.avatarGrad }}>
                 {client.initials}
               </div>
 
@@ -42,16 +40,14 @@ export default function PlansEndingSoonPanel({ onSelectClient }) {
                     {client.currentPlan.daysLeft}d left
                   </span>
                 </div>
-
                 <p className="plan-name">{client.currentPlan.name}</p>
-
                 <div className="plan-progress-row">
                   <div className="progress-track">
                     <div
                       className="progress-fill"
                       style={{
                         width: `${client.currentPlan.progress}%`,
-                        background: `linear-gradient(90deg, var(--coral), var(--amber))`,
+                        background: 'linear-gradient(90deg, var(--coral), var(--amber))',
                       }}
                     />
                   </div>

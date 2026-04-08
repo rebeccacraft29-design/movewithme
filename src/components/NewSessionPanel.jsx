@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { X, Plus, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
-import { clients, getActiveClients } from '../data/mockData'
+import { useAuth } from '../context/AuthContext'
+import { getActiveClients } from '../lib/db'
 import SearchDropdown from './SearchDropdown'
 import './NewSessionPanel.css'
 

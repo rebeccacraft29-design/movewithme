@@ -3,6 +3,9 @@ import {
   Zap, ChevronRight, User, Camera, Check,
   Briefcase, Users, LayoutDashboard, ClipboardList,
 } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
+import { updateTrainerProfile, upsertTrainerRoles } from '../../lib/db'
+import { seedTrainerData } from '../../lib/seed'
 import './Onboarding.css'
 
 const ROLES = [
@@ -17,7 +20,8 @@ const ROLES = [
 const SESSION_DURATIONS = ['30 min', '45 min', '60 min', '90 min']
 const CLIENT_COUNTS     = ['1–5', '6–15', '16–30', '30+']
 
-export default function Onboarding({ onComplete }) {
+export default function Onboarding({ user, onComplete }) {
+  const { refreshTrainer } = useAuth()
   const [step, setStep]               = useState(1)
   const [firstName, setFirstName]     = useState('')
   const [lastName, setLastName]       = useState('')
@@ -26,6 +30,7 @@ export default function Onboarding({ onComplete }) {
   const [businessName, setBusinessName] = useState('')
   const [sessionDuration, setSessionDuration] = useState('60 min')
   const [clientCount, setClientCount] = useState('1–5')
+  const [saving, setSaving]           = useState(false)
   const photoInputRef = useRef(null)
 
   function toggleRole(role) {
@@ -42,17 +47,35 @@ export default function Onboarding({ onComplete }) {
     reader.readAsDataURL(file)
   }
 
-  function handleFinish(action) {
-    onComplete({
-      firstName,
-      lastName,
-      photoUrl,
-      roles,
-      businessName,
-      sessionDuration,
-      clientCount,
-      startAction: action,
-    })
+  async function handleFinish(action) {
+    if (!user?.id || saving) return
+    setSaving(true)
+    try {
+      const roleMap = {
+        'Personal Trainer':  'personal_trainer',
+        'Physiotherapist':   'physiotherapist',
+        'Chiropractor':      'chiropractor',
+        'Massage Therapist': 'massage_therapist',
+        'Nutritionist':      'other',
+        'Other':             'other',
+      }
+      await updateTrainerProfile(user.id, {
+        fullName:       `${firstName} ${lastName}`.trim() || null,
+        avatarUrl:      photoUrl || null,
+        onboardingDone: true,
+      })
+      await upsertTrainerRoles(user.id, roles.map(r => roleMap[r] ?? 'other'))
+      await seedTrainerData(user.id)
+      await refreshTrainer()
+    } catch (err) {
+      console.error('Onboarding save failed:', err)
+    } finally {
+      onComplete({
+        firstName, lastName, photoUrl, roles,
+        businessName, sessionDuration, clientCount,
+        startAction: action,
+      })
+    }
   }
 
   return (
@@ -249,7 +272,7 @@ export default function Onboarding({ onComplete }) {
             <div className="ob-quickstart-grid">
               <button
                 className="ob-quickstart-card"
-                onClick={() => handleFinish('clients')}
+                onClick={() => handleFinish('clients')} disabled={saving}
               >
                 <div className="ob-qs-icon ob-qs-coral"><User size={22} /></div>
                 <strong>Add your first client</strong>

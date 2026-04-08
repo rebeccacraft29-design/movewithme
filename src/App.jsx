@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useAuth } from './context/AuthContext'
 import Landing from './pages/auth/Landing'
 import Login from './pages/auth/Login'
 import Onboarding from './pages/onboarding/Onboarding'
@@ -14,63 +15,57 @@ import MessagesPage from './pages/Messages'
 import Programs from './pages/Programs'
 import NewSessionPanel from './components/NewSessionPanel'
 import GuidedTour from './components/GuidedTour'
-import { scheduleSessions } from './data/scheduleData'
 import { defaultSessionTypes } from './data/sessionTypes'
-import { initialConversations } from './data/messagesData'
+import { getScheduleSessions } from './lib/db'
 import './App.css'
 
-// appScreen: 'landing' | 'login' | 'onboarding' | 'app'
-
 export default function App() {
-  const [appScreen,      setAppScreen]      = useState('landing')
-  const [userProfile,    setUserProfile]    = useState(null)
-  const [showTour,       setShowTour]       = useState(false)
+  const { user, trainer, loading, signOut, refreshTrainer } = useAuth()
 
-  const [activePage,      setActivePage]      = useState('dashboard')
-  const [activeClientId,  setActiveClientId]  = useState(null)
-  const [activeClientTab, setActiveClientTab] = useState('overview')
-  const [clientsFilter,   setClientsFilter]   = useState('allActive')
-  const [sessions,        setSessions]        = useState(scheduleSessions)
-  const [sessionTypes,    setSessionTypes]    = useState(defaultSessionTypes)
-  const [newSessionOpen,  setNewSessionOpen]  = useState(false)
-  const [conversations,   setConversations]   = useState(initialConversations)
+  // Auth screen toggle (only relevant when not logged in)
+  const [showLogin,  setShowLogin]  = useState(false)
 
-  const unreadMessages = conversations.reduce((sum, c) => sum + c.unreadCount, 0)
+  // App-level state
+  const [activePage,          setActivePage]          = useState('dashboard')
+  const [activeClientId,      setActiveClientId]      = useState(null)
+  const [activeClientTab,     setActiveClientTab]     = useState('overview')
+  const [clientsFilter,       setClientsFilter]       = useState('allActive')
+  const [sessionTypes,        setSessionTypes]        = useState(defaultSessionTypes)
+  const [newSessionOpen,      setNewSessionOpen]      = useState(false)
+  const [showTour,            setShowTour]            = useState(false)
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false)
 
-  function handleSignUp(data) {
-    setAppScreen('onboarding')
-  }
+  // Schedule sessions — loaded from Supabase, shared with Schedule + ClientProfile
+  const [sessions,    setSessions]    = useState([])
+  const [sessionsLoaded, setSessionsLoaded] = useState(false)
 
-  function handleLogin(data) {
-    // Mock login — go straight to dashboard
-    setUserProfile({ firstName: 'Rebecca' })
-    setActivePage('dashboard')
-    setAppScreen('app')
-  }
+  // Reload sessions whenever the trainer changes (login/logout)
+  useEffect(() => {
+    if (!trainer?.id) { setSessions([]); setSessionsLoaded(false); return }
+    getScheduleSessions(trainer.id).then(rows => {
+      setSessions(rows)
+      setSessionsLoaded(true)
+    })
+  }, [trainer?.id])
 
-  function handleOnboardingComplete(profile) {
-    setUserProfile(profile)
-    if (profile.startAction === 'tour') {
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  async function handleOnboardingComplete(profile) {
+    // Immediately exit onboarding regardless of DB sync state
+    setOnboardingDismissed(true)
+    const action = profile.startAction
+    if (action === 'tour') {
       setActivePage('dashboard')
-      setAppScreen('app')
-      // Small delay so dashboard is mounted before tour starts
       setTimeout(() => setShowTour(true), 300)
-    } else if (profile.startAction === 'clients') {
+    } else if (action === 'clients') {
       setActivePage('clients')
-      setAppScreen('app')
-    } else if (profile.startAction === 'programs') {
+    } else if (action === 'programs') {
       setActivePage('programs')
-      setAppScreen('app')
     } else {
       setActivePage('dashboard')
-      setAppScreen('app')
     }
-  }
-
-  function handleLogout() {
-    setUserProfile(null)
-    setActivePage('dashboard')
-    setAppScreen('landing')
+    // Sync trainer state in the background; navigation is already done
+    refreshTrainer().catch(err => console.error('refreshTrainer failed:', err))
   }
 
   function handleNavigate(page) {
@@ -90,35 +85,57 @@ export default function App() {
     setActivePage('clients')
   }
 
-  // ── Auth / onboarding screens (no sidebar) ──────────────────────────────
+  function handleSessionAdded(newSession) {
+    setSessions(prev => [...prev, newSession])
+  }
 
-  if (appScreen === 'landing') {
+  function handleSessionsChange(updated) {
+    setSessions(updated)
+  }
+
+  // ── Loading screen ─────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="app-loading">
+        <div className="app-loading-spinner" />
+      </div>
+    )
+  }
+
+  // ── Not authenticated ──────────────────────────────────────────────────────
+
+  if (!user) {
+    if (showLogin) {
+      return (
+        <Login
+          onLogin={() => setShowLogin(false)}
+          onSignUp={() => setShowLogin(false)}
+        />
+      )
+    }
     return (
       <Landing
-        onSignUp={handleSignUp}
-        onLogin={() => setAppScreen('login')}
+        onSignUp={() => setShowLogin(false)}
+        onLogin={() => setShowLogin(true)}
       />
     )
   }
 
-  if (appScreen === 'login') {
-    return (
-      <Login
-        onLogin={handleLogin}
-        onSignUp={() => setAppScreen('landing')}
-      />
-    )
-  }
+  // ── Authenticated but onboarding not complete ──────────────────────────────
 
-  if (appScreen === 'onboarding') {
+  if (!trainer?.onboarding_done && !onboardingDismissed) {
     return (
       <Onboarding
+        user={user}
         onComplete={handleOnboardingComplete}
       />
     )
   }
 
-  // ── Main app ─────────────────────────────────────────────────────────────
+  // ── Main app ───────────────────────────────────────────────────────────────
+
+  const unreadMessages = 0 // computed inside MessagesPage
 
   const knownPages = ['dashboard', 'clients', 'schedule', 'settings', 'reports', 'messages', 'progress', 'programs']
 
@@ -127,7 +144,7 @@ export default function App() {
       <Sidebar
         activePage={activePage}
         onNavigate={handleNavigate}
-        onLogout={handleLogout}
+        onLogout={signOut}
         unreadMessages={unreadMessages}
       />
 
@@ -159,7 +176,7 @@ export default function App() {
         {activePage === 'schedule' && (
           <Schedule
             sessions={sessions}
-            setSessions={setSessions}
+            setSessions={handleSessionsChange}
             sessionTypes={sessionTypes}
             onSelectClient={handleSelectClient}
             onOpenNewSession={() => setNewSessionOpen(true)}
@@ -179,10 +196,7 @@ export default function App() {
         {activePage === 'programs' && <Programs />}
 
         {activePage === 'messages' && (
-          <MessagesPage
-            conversations={conversations}
-            setConversations={setConversations}
-          />
+          <MessagesPage />
         )}
 
         {!knownPages.includes(activePage) && (
@@ -208,9 +222,10 @@ export default function App() {
       {newSessionOpen && (
         <NewSessionPanel
           sessions={sessions}
-          setSessions={setSessions}
+          setSessions={handleSessionsChange}
           sessionTypes={sessionTypes}
           onClose={() => setNewSessionOpen(false)}
+          onSessionAdded={handleSessionAdded}
         />
       )}
 

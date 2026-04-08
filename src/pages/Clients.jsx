@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Flame, ChevronRight, SlidersHorizontal, GripVertical, X } from 'lucide-react'
-import { clients, getServiceConfig } from '../data/mockData'
+import { getServiceConfig } from '../data/mockData'
+import { useAuth } from '../context/AuthContext'
+import { getClients } from '../lib/db'
 import SearchDropdown from '../components/SearchDropdown'
 import './Clients.css'
 
@@ -284,10 +286,18 @@ function ColumnSettings({ columnOrder, setColumnOrder, onClose }) {
 // ── ClientsPage ───────────────────────────────────────────────────────────────
 
 export default function ClientsPage({ onSelectClient, initialFilter = 'allActive' }) {
+  const { trainer } = useAuth()
+  const [clients,         setClients]         = useState([])
   const [activeFilter,    setActiveFilter]    = useState(initialFilter)
   const [columnOrder,     setColumnOrder]     = useState(DEFAULT_COL_ORDER)
   const [colSettingsOpen, setColSettingsOpen] = useState(false)
   const colSettingsRef = useRef(null)
+
+  // Load clients from Supabase
+  useEffect(() => {
+    if (!trainer?.id) return
+    getClients(trainer.id).then(setClients)
+  }, [trainer?.id])
 
   // Sync active filter when navigating from sidebar dropdown
   useEffect(() => {
@@ -309,7 +319,7 @@ export default function ClientsPage({ onSelectClient, initialFilter = 'allActive
   const filteredClients = useMemo(() => {
     const group = GROUPS.find(g => g.key === activeFilter) ?? GROUPS[0]
     return clients.filter(group.filter)
-  }, [activeFilter])
+  }, [activeFilter, clients])
 
   const colHeader = (
     <div className="clients-list-cols" style={{ gridTemplateColumns: buildGrid(columnOrder) }}>

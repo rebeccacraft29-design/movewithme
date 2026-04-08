@@ -12,7 +12,8 @@ import {
   Check,
   Clock,
 } from 'lucide-react'
-import { clients } from '../data/mockData'
+import { useAuth } from '../context/AuthContext'
+import { getActiveClients } from '../lib/db'
 import SearchDropdown from '../components/SearchDropdown'
 import './Schedule.css'
 
@@ -98,7 +99,7 @@ function ServiceBadge({ serviceType }) {
 }
 
 // ─── SessionDetailModal ───────────────────────────────────────────────────────
-function SessionDetailModal({ session, onClose, onViewProfile }) {
+function SessionDetailModal({ session, clients, onClose, onViewProfile }) {
   const client = session.isGroupClass ? null : clients.find(c => c.id === session.clientId)
   const [editMode, setEditMode] = useState(false)
   const [editDate, setEditDate] = useState(session.date)
@@ -427,6 +428,9 @@ export default function Schedule({
   const TODAY    = new Date('2026-04-02T10:00:00')
   const todayStr = toDateStr(TODAY)
 
+  const { trainer } = useAuth()
+  const [clients, setClients] = useState([])
+
   const [weekStart,     setWeekStart]     = useState(() => getMondayOf(TODAY))
   const [agendaOpen,    setAgendaOpen]    = useState(() => {
     try { return localStorage.getItem('mwm_agendaOpen') !== 'false' } catch { return true }
@@ -440,6 +444,10 @@ export default function Schedule({
   const [detailSession, setDetailSession] = useState(null)
 
   const calendarScrollRef = useRef(null)
+
+  useEffect(() => {
+    if (trainer?.id) getActiveClients(trainer.id).then(setClients)
+  }, [trainer?.id])
 
   useEffect(() => {
     try { localStorage.setItem('mwm_agendaOpen', String(agendaOpen)) } catch {}
@@ -748,6 +756,7 @@ export default function Schedule({
       {detailSession && (
         <SessionDetailModal
           session={detailSession}
+          clients={clients}
           onClose={() => setDetailSession(null)}
           onViewProfile={id => { onSelectClient?.(id); setDetailSession(null) }}
         />

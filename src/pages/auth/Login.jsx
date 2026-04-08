@@ -1,15 +1,36 @@
 import { useState } from 'react'
 import { Zap, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
 import './Auth.css'
 
 export default function Login({ onLogin, onSignUp }) {
+  const { signIn, signInWithGoogle } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email,        setEmail]        = useState('')
+  const [password,     setPassword]     = useState('')
+  const [error,        setError]        = useState(null)
+  const [loading,      setLoading]      = useState(false)
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    onLogin({ method: 'email', email })
+    setError(null)
+    setLoading(true)
+    try {
+      await signIn(email, password)
+      onLogin()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleGoogle() {
+    try {
+      await signInWithGoogle()
+    } catch (err) {
+      setError(err.message)
+    }
   }
 
   return (
@@ -29,10 +50,9 @@ export default function Login({ onLogin, onSignUp }) {
         <h1 className="auth-card-title">Welcome back</h1>
         <p className="auth-card-sub">Log in to continue to your dashboard.</p>
 
-        <button className="btn-google btn-google-soon" disabled>
+        <button className="btn-google" onClick={handleGoogle} disabled={loading}>
           <GoogleIcon />
           Continue with Google
-          <span className="coming-soon-badge">Coming Soon</span>
         </button>
 
         <div className="auth-divider"><span>or</span></div>
@@ -71,7 +91,10 @@ export default function Login({ onLogin, onSignUp }) {
             <button type="button">Forgot password?</button>
           </div>
 
-          <button type="submit" className="btn-primary-auth">Log in</button>
+          {error && <p className="auth-error">{error}</p>}
+          <button type="submit" className="btn-primary-auth" disabled={loading}>
+            {loading ? 'Logging in…' : 'Log in'}
+          </button>
         </form>
 
         <p className="auth-switch">
