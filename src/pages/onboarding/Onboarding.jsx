@@ -31,6 +31,7 @@ export default function Onboarding({ user, onComplete }) {
   const [sessionDuration, setSessionDuration] = useState('60 min')
   const [clientCount, setClientCount] = useState('1–5')
   const [saving, setSaving]           = useState(false)
+  const [saveError, setSaveError]     = useState(null)
   const photoInputRef = useRef(null)
 
   function toggleRole(role) {
@@ -47,9 +48,21 @@ export default function Onboarding({ user, onComplete }) {
     reader.readAsDataURL(file)
   }
 
+  async function handleStep1Continue() {
+    if (!user?.id) return
+    setStep(2)
+    // Save name to DB in background so dashboard can show it immediately
+    updateTrainerProfile(user.id, {
+      fullName: `${firstName} ${lastName}`.trim() || null,
+    }).then(() => refreshTrainer()).catch(err =>
+      console.error('Name save failed:', err)
+    )
+  }
+
   async function handleFinish(action) {
     if (!user?.id || saving) return
     setSaving(true)
+    setSaveError(null)
     try {
       const roleMap = {
         'Personal Trainer':  'personal_trainer',
@@ -66,15 +79,24 @@ export default function Onboarding({ user, onComplete }) {
       })
       await upsertTrainerRoles(user.id, roles.map(r => roleMap[r] ?? 'other'))
       await seedTrainerData(user.id)
+      // Refresh trainer BEFORE calling onComplete so trainer.onboarding_done
+      // is true in context — App.jsx will skip onboarding on next render.
       await refreshTrainer()
-    } catch (err) {
-      console.error('Onboarding save failed:', err)
-    } finally {
       onComplete({
         firstName, lastName, photoUrl, roles,
         businessName, sessionDuration, clientCount,
         startAction: action,
       })
+    } catch (err) {
+      console.error('Onboarding save failed:', {
+        message: err?.message,
+        code:    err?.code,
+        details: err?.details,
+        hint:    err?.hint,
+        raw:     err,
+      })
+      setSaveError('Something went wrong. Please try again.')
+      setSaving(false)
     }
   }
 
@@ -185,7 +207,7 @@ export default function Onboarding({ user, onComplete }) {
 
             <button
               className="ob-next-btn"
-              onClick={() => setStep(2)}
+              onClick={handleStep1Continue}
               disabled={roles.length === 0 || !firstName.trim()}
             >
               Continue <ChevronRight size={16} />
@@ -272,7 +294,8 @@ export default function Onboarding({ user, onComplete }) {
             <div className="ob-quickstart-grid">
               <button
                 className="ob-quickstart-card"
-                onClick={() => handleFinish('clients')} disabled={saving}
+                onClick={() => handleFinish('clients')}
+                disabled={saving}
               >
                 <div className="ob-qs-icon ob-qs-coral"><User size={22} /></div>
                 <strong>Add your first client</strong>
@@ -281,6 +304,7 @@ export default function Onboarding({ user, onComplete }) {
               <button
                 className="ob-quickstart-card"
                 onClick={() => handleFinish('programs')}
+                disabled={saving}
               >
                 <div className="ob-qs-icon ob-qs-teal"><ClipboardList size={22} /></div>
                 <strong>Build your first program</strong>
@@ -289,6 +313,7 @@ export default function Onboarding({ user, onComplete }) {
               <button
                 className="ob-quickstart-card"
                 onClick={() => handleFinish('dashboard')}
+                disabled={saving}
               >
                 <div className="ob-qs-icon ob-qs-amber"><LayoutDashboard size={22} /></div>
                 <strong>Explore the dashboard</strong>
@@ -296,17 +321,23 @@ export default function Onboarding({ user, onComplete }) {
               </button>
             </div>
 
+            {saveError && (
+              <p className="ob-save-error">{saveError}</p>
+            )}
+
             <div className="ob-tour-row">
               <p className="ob-tour-hint">Want a quick tour? We'll show you around.</p>
               <button
                 className="ob-tour-btn"
                 onClick={() => handleFinish('tour')}
+                disabled={saving}
               >
-                Start Tour
+                {saving ? 'Saving…' : 'Start Tour'}
               </button>
               <button
                 className="ob-skip-link"
                 onClick={() => handleFinish('dashboard')}
+                disabled={saving}
               >
                 Skip, I'll explore myself
               </button>

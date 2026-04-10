@@ -20,10 +20,10 @@ import { getScheduleSessions } from './lib/db'
 import './App.css'
 
 export default function App() {
-  const { user, trainer, loading, signOut, refreshTrainer } = useAuth()
+  const { user, trainer, loading, trainerLoading, signOut, refreshTrainer } = useAuth()
 
-  // Auth screen toggle (only relevant when not logged in)
-  const [showLogin,  setShowLogin]  = useState(false)
+  // Show Landing (sign-up) screen from Login's "Sign up" link
+  const [showLanding, setShowLanding] = useState(false)
 
   // App-level state
   const [activePage,          setActivePage]          = useState('dashboard')
@@ -33,7 +33,6 @@ export default function App() {
   const [sessionTypes,        setSessionTypes]        = useState(defaultSessionTypes)
   const [newSessionOpen,      setNewSessionOpen]      = useState(false)
   const [showTour,            setShowTour]            = useState(false)
-  const [onboardingDismissed, setOnboardingDismissed] = useState(false)
 
   // Schedule sessions — loaded from Supabase, shared with Schedule + ClientProfile
   const [sessions,    setSessions]    = useState([])
@@ -50,9 +49,7 @@ export default function App() {
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
-  async function handleOnboardingComplete(profile) {
-    // Immediately exit onboarding regardless of DB sync state
-    setOnboardingDismissed(true)
+  function handleOnboardingComplete(profile) {
     const action = profile.startAction
     if (action === 'tour') {
       setActivePage('dashboard')
@@ -64,8 +61,6 @@ export default function App() {
     } else {
       setActivePage('dashboard')
     }
-    // Sync trainer state in the background; navigation is already done
-    refreshTrainer().catch(err => console.error('refreshTrainer failed:', err))
   }
 
   function handleNavigate(page) {
@@ -93,38 +88,32 @@ export default function App() {
     setSessions(updated)
   }
 
-  // ── Loading screen ─────────────────────────────────────────────────────────
+  // ── Login screen — always the entry point ──────────────────────────────────
+  // Shown during initial session check (loading), while fetching the trainer
+  // row (trainerLoading), and when the user is not signed in (!user).
+  // Session restore auto-navigates once loading + trainerLoading resolve.
+  // Logout resets user → null → returns here.
 
-  if (loading) {
-    return (
-      <div className="app-loading">
-        <div className="app-loading-spinner" />
-      </div>
-    )
-  }
-
-  // ── Not authenticated ──────────────────────────────────────────────────────
-
-  if (!user) {
-    if (showLogin) {
+  if (loading || trainerLoading || !user) {
+    if (showLanding) {
       return (
-        <Login
-          onLogin={() => setShowLogin(false)}
-          onSignUp={() => setShowLogin(false)}
+        <Landing
+          onSignUp={() => setShowLanding(false)}
+          onLogin={() => setShowLanding(false)}
         />
       )
     }
     return (
-      <Landing
-        onSignUp={() => setShowLogin(false)}
-        onLogin={() => setShowLogin(true)}
+      <Login
+        onLogin={() => {}}
+        onSignUp={() => setShowLanding(true)}
       />
     )
   }
 
   // ── Authenticated but onboarding not complete ──────────────────────────────
 
-  if (!trainer?.onboarding_done && !onboardingDismissed) {
+  if (!trainer?.onboarding_completed) {
     return (
       <Onboarding
         user={user}

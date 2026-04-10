@@ -595,16 +595,28 @@ export async function deleteScheduleSession(sessionId) {
 // ─── Trainer profile ──────────────────────────────────────────────────────────
 
 export async function updateTrainerProfile(userId, data) {
+  const updates = {}
+  if (data.fullName      !== undefined) updates.full_name       = data.fullName
+  if (data.avatarUrl     !== undefined) updates.avatar_url      = data.avatarUrl
+  if (data.bio           !== undefined) updates.bio             = data.bio
+  if (data.onboardingDone !== undefined) updates.onboarding_completed = data.onboardingDone
+
+  if (Object.keys(updates).length === 0) return
+
   const { error } = await supabase
     .from('trainers')
-    .update({
-      full_name:       data.fullName ?? null,
-      avatar_url:      data.avatarUrl ?? null,
-      bio:             data.bio ?? null,
-      onboarding_done: data.onboardingDone ?? true,
+    .upsert({ id: userId, ...updates })
+  if (error) {
+    console.error('updateTrainerProfile failed:', {
+      message: error.message,
+      code:    error.code,
+      details: error.details,
+      hint:    error.hint,
+      updates,
+      userId,
     })
-    .eq('id', userId)
-  if (error) throw error
+    throw error
+  }
 }
 
 export async function upsertTrainerRoles(userId, roleTypes) {

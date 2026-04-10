@@ -562,6 +562,13 @@
 
 .ob-skip-link:hover { color: var(--text-secondary); }
 
+.ob-save-error {
+  color: #e53e3e;
+  font-size: 0.85rem;
+  text-align: center;
+  margin: 8px 0 0;
+}
+
 /* ── Mobile ──────────────────────────────────────────────────────────────── */
 
 @media (max-width: 560px) {

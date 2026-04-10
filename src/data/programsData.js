@@ -58,6 +58,8 @@ export const exerciseLibrary = [
   { id: 'ex-42', name: 'Goblet Squat',             category: 'functional', muscle: 'Legs' },
   { id: 'ex-43', name: 'Single Leg Deadlift',      category: 'functional', muscle: 'Posterior Chain' },
   { id: 'ex-44', name: 'Step-Up',                  category: 'functional', muscle: 'Legs' },
+  // Rehab / mobility extras
+  { id: 'ex-51', name: 'Glute Bridge',             category: 'rehab',      muscle: 'Glutes' },
 ]
 
 export function getExerciseName(exerciseId) {
