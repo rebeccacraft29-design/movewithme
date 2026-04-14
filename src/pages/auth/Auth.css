@@ -314,23 +314,43 @@
 
 .auth-field-toggle:hover { color: var(--text-secondary); }
 
-/* ── Forgot password ─────────────────────────────────────────────────────── */
+/* ── Remember me + forgot row ────────────────────────────────────────────── */
 
-.auth-forgot {
-  text-align: right;
+.auth-remember-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-top: -4px;
 }
 
-.auth-forgot button {
+.auth-remember {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.auth-remember input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--coral);
+  cursor: pointer;
+}
+
+.auth-forgot-btn {
   background: none;
   border: none;
   font-size: 12px;
   color: var(--text-muted);
   cursor: pointer;
   transition: color 0.15s;
+  font-family: inherit;
 }
 
-.auth-forgot button:hover { color: var(--text-secondary); }
+.auth-forgot-btn:hover { color: var(--text-secondary); }
 
 /* ── Primary CTA ─────────────────────────────────────────────────────────── */
 

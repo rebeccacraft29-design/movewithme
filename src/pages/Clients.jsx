@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Flame, ChevronRight, SlidersHorizontal, GripVertical, X } from 'lucide-react'
+import { Flame, ChevronRight, SlidersHorizontal, GripVertical, X, UserPlus } from 'lucide-react'
 import { getServiceConfig } from '../data/mockData'
 import { useAuth } from '../context/AuthContext'
 import { getClients } from '../lib/db'
 import SearchDropdown from '../components/SearchDropdown'
+import AddClientPanel from '../components/AddClientPanel'
 import './Clients.css'
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -285,19 +286,20 @@ function ColumnSettings({ columnOrder, setColumnOrder, onClose }) {
 
 // ── ClientsPage ───────────────────────────────────────────────────────────────
 
-export default function ClientsPage({ onSelectClient, initialFilter = 'allActive' }) {
+export default function ClientsPage({ onSelectClient, initialFilter = 'allActive', refreshKey }) {
   const { trainer } = useAuth()
   const [clients,         setClients]         = useState([])
   const [activeFilter,    setActiveFilter]    = useState(initialFilter)
   const [columnOrder,     setColumnOrder]     = useState(DEFAULT_COL_ORDER)
   const [colSettingsOpen, setColSettingsOpen] = useState(false)
+  const [addClientOpen,   setAddClientOpen]   = useState(false)
   const colSettingsRef = useRef(null)
 
   // Load clients from Supabase
   useEffect(() => {
     if (!trainer?.id) return
     getClients(trainer.id).then(setClients)
-  }, [trainer?.id])
+  }, [trainer?.id, refreshKey])
 
   // Sync active filter when navigating from sidebar dropdown
   useEffect(() => {
@@ -345,6 +347,14 @@ export default function ClientsPage({ onSelectClient, initialFilter = 'allActive
             placeholder="Search all clients…"
             searchPlaceholder="Search clients…"
           />
+
+          <button
+            className="add-client-btn"
+            onClick={() => setAddClientOpen(true)}
+          >
+            <UserPlus size={15} />
+            Add Client
+          </button>
 
           <div className="col-settings-wrap" ref={colSettingsRef}>
             <button
@@ -395,6 +405,16 @@ export default function ClientsPage({ onSelectClient, initialFilter = 'allActive
           : <div className="clients-empty">No clients in this group.</div>
         }
       </div>
+
+      {addClientOpen && (
+        <AddClientPanel
+          onClose={() => setAddClientOpen(false)}
+          onClientAdded={newClient => {
+            setClients(prev => [newClient, ...prev])
+            setAddClientOpen(false)
+          }}
+        />
+      )}
     </div>
   )
 }

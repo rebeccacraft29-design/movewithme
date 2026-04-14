@@ -8,6 +8,7 @@ export default function Login({ onLogin, onSignUp }) {
   const [showPassword, setShowPassword] = useState(false)
   const [email,        setEmail]        = useState('')
   const [password,     setPassword]     = useState('')
+  const [rememberMe,   setRememberMe]   = useState(true)
   const [error,        setError]        = useState(null)
   const [loading,      setLoading]      = useState(false)
 
@@ -16,7 +17,7 @@ export default function Login({ onLogin, onSignUp }) {
     setError(null)
     setLoading(true)
     try {
-      await signIn(email, password)
+      await signIn(email, password, rememberMe)
       onLogin()
     } catch (err) {
       setError(err.message)
@@ -87,8 +88,16 @@ export default function Login({ onLogin, onSignUp }) {
             </button>
           </div>
 
-          <div className="auth-forgot">
-            <button type="button">Forgot password?</button>
+          <div className="auth-remember-row">
+            <label className="auth-remember">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={e => setRememberMe(e.target.checked)}
+              />
+              <span>Remember me</span>
+            </label>
+            <button type="button" className="auth-forgot-btn">Forgot password?</button>
           </div>
 
           {error && <p className="auth-error">{error}</p>}

@@ -46,6 +46,22 @@ export function AuthProvider({ children }) {
     // (or null if logged out), so we never need a separate getSession() call.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        // On cold start: if user opted out of "remember me", sign them out
+        // unless they have an active sessionStorage marker from this browser session.
+        if (event === 'INITIAL_SESSION' && session?.user) {
+          if (
+            localStorage.getItem('mwm_remember') === '0' &&
+            !sessionStorage.getItem('mwm_session')
+          ) {
+            await supabase.auth.signOut()
+            setUser(null)
+            setTrainer(null)
+            clearTimeout(timeoutId)
+            setLoading(false)
+            return
+          }
+        }
+
         if (session?.user) {
           setUser(session.user)
           setTrainerLoading(true)
@@ -78,9 +94,16 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  async function signIn(email, password) {
+  async function signIn(email, password, rememberMe = true) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+    if (rememberMe) {
+      localStorage.setItem('mwm_remember', '1')
+      sessionStorage.removeItem('mwm_session')
+    } else {
+      localStorage.setItem('mwm_remember', '0')
+      sessionStorage.setItem('mwm_session', '1')
+    }
     return data
   }
 

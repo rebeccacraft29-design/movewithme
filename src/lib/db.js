@@ -207,6 +207,7 @@ export async function addClient(trainerId, data) {
       service_type:   data.serviceType ?? 'personal_trainer',
       status:         'active',
       health_context: data.healthContext ?? null,
+      notes:          data.notes ?? null,
     })
     .select()
     .single()

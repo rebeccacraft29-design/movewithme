@@ -55,8 +55,14 @@ export default function NewSessionPanel({ sessions, setSessions, sessionTypes, o
   const TODAY    = new Date('2026-04-02T10:00:00')
   const todayStr = toDateStr(TODAY)
 
-  const activeClients  = getActiveClients()
+  const { trainer }    = useAuth()
+  const [activeClients, setActiveClients] = useState([])
   const calScrollRef   = useRef(null)
+
+  useEffect(() => {
+    if (!trainer?.id) return
+    getActiveClients(trainer.id).then(setActiveClients).catch(() => {})
+  }, [trainer?.id])
 
   const [weekStart, setWeekStart] = useState(() => getMondayOf(TODAY))
   const [form, setForm] = useState({
@@ -103,7 +109,7 @@ export default function NewSessionPanel({ sessions, setSessions, sessionTypes, o
 
   function handleSubmit(e) {
     e.preventDefault()
-    const clientData = clients.find(c => c.id === form.clientId)
+    const clientData = activeClients.find(c => c.id === form.clientId)
     setSessions(prev => [
       ...prev,
       {

@@ -78,7 +78,7 @@ export default function Onboarding({ user, onComplete }) {
         onboardingDone: true,
       })
       await upsertTrainerRoles(user.id, roles.map(r => roleMap[r] ?? 'other'))
-      await seedTrainerData(user.id)
+      await seedTrainerData(user.id, roles)
       // Refresh trainer BEFORE calling onComplete so trainer.onboarding_done
       // is true in context — App.jsx will skip onboarding on next render.
       await refreshTrainer()

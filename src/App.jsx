@@ -14,6 +14,7 @@ import Progress from './pages/Progress'
 import MessagesPage from './pages/Messages'
 import Programs from './pages/Programs'
 import NewSessionPanel from './components/NewSessionPanel'
+import AddClientPanel from './components/AddClientPanel'
 import GuidedTour from './components/GuidedTour'
 import { defaultSessionTypes } from './data/sessionTypes'
 import { getScheduleSessions } from './lib/db'
@@ -32,6 +33,9 @@ export default function App() {
   const [clientsFilter,       setClientsFilter]       = useState('allActive')
   const [sessionTypes,        setSessionTypes]        = useState(defaultSessionTypes)
   const [newSessionOpen,      setNewSessionOpen]      = useState(false)
+  const [addClientOpen,       setAddClientOpen]       = useState(false)
+  const [clientsRefreshKey,   setClientsRefreshKey]   = useState(0)
+  const [fabOpen,             setFabOpen]             = useState(false)
   const [showTour,            setShowTour]            = useState(false)
 
   // Schedule sessions — loaded from Supabase, shared with Schedule + ClientProfile
@@ -150,6 +154,7 @@ export default function App() {
           <ClientsPage
             onSelectClient={handleSelectClient}
             initialFilter={clientsFilter}
+            refreshKey={clientsRefreshKey}
           />
         )}
 
@@ -196,16 +201,35 @@ export default function App() {
         )}
       </main>
 
-      {/* ── Global floating action button ── */}
-      <button
-        id="tour-fab"
-        className="global-fab"
-        onClick={() => setNewSessionOpen(true)}
-        title="New session"
-        aria-label="New session"
-      >
-        +
-      </button>
+      {/* ── Global FAB speed dial ── */}
+      {fabOpen && (
+        <div className="fab-backdrop" onClick={() => setFabOpen(false)} />
+      )}
+      <div className="fab-container" id="tour-fab">
+        {fabOpen && (
+          <div className="fab-speed-dial">
+            <button
+              className="fab-option"
+              onClick={() => { setFabOpen(false); setAddClientOpen(true) }}
+            >
+              Add Client
+            </button>
+            <button
+              className="fab-option"
+              onClick={() => { setFabOpen(false); setNewSessionOpen(true) }}
+            >
+              New Session
+            </button>
+          </div>
+        )}
+        <button
+          className={`global-fab${fabOpen ? ' global-fab--open' : ''}`}
+          onClick={() => setFabOpen(o => !o)}
+          aria-label="Quick actions"
+        >
+          +
+        </button>
+      </div>
 
       {/* ── Global new session panel ── */}
       {newSessionOpen && (
@@ -215,6 +239,19 @@ export default function App() {
           sessionTypes={sessionTypes}
           onClose={() => setNewSessionOpen(false)}
           onSessionAdded={handleSessionAdded}
+        />
+      )}
+
+      {/* ── Global add client panel ── */}
+      {addClientOpen && (
+        <AddClientPanel
+          onClose={() => setAddClientOpen(false)}
+          onClientAdded={() => {
+            setAddClientOpen(false)
+            setActivePage('clients')
+            setActiveClientId(null)
+            setClientsRefreshKey(k => k + 1)
+          }}
         />
       )}
 

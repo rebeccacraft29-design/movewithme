@@ -1,0 +1,169 @@
+/* ─── Add Client Panel ───────────────────────────────────────────────────── */
+
+.acp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.acp-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 520px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.acp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 0;
+}
+
+.acp-header-left {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.acp-header-icon {
+  color: var(--coral);
+}
+
+.acp-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.acp-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.acp-close:hover { color: var(--text-primary); background: var(--surface-raised); }
+
+/* ── Form ────────────────────────────────────────────────────────────────── */
+
+.acp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 24px 24px;
+}
+
+.acp-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.acp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.acp-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.acp-req {
+  color: var(--coral);
+}
+
+.acp-opt {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.acp-field input,
+.acp-field textarea {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+  resize: vertical;
+}
+
+.acp-field input::placeholder,
+.acp-field textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.acp-field input:focus,
+.acp-field textarea:focus {
+  border-color: var(--coral);
+  box-shadow: 0 0 0 3px rgba(255, 107, 91, 0.1);
+}
+
+/* ── Error ───────────────────────────────────────────────────────────────── */
+
+.acp-error {
+  font-size: 12px;
+  color: #FF6B5B;
+  margin: 0;
+}
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+
+.acp-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.acp-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.acp-btn--cancel {
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.acp-btn--cancel:hover { background: var(--navy-lighter); }
+
+.acp-btn--save {
+  background: var(--coral);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(255, 107, 91, 0.35);
+}
+.acp-btn--save:hover:not(:disabled) { opacity: 0.9; }
+.acp-btn--save:disabled { opacity: 0.55; cursor: not-allowed; }

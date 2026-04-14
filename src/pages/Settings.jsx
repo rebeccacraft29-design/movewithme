@@ -6,7 +6,36 @@ import {
   Upload, Dumbbell,
 } from 'lucide-react'
 import ImportModal from '../components/ImportModal'
+import { useAuth } from '../context/AuthContext'
+import { updateTrainerProfile, upsertTrainerRoles } from '../lib/db'
+import { supabase } from '../lib/supabase'
 import './Settings.css'
+
+const ROLE_TO_DB = {
+  'Personal Trainer':  'personal_trainer',
+  'Physiotherapist':   'physiotherapist',
+  'Chiropractor':      'chiropractor',
+  'Massage Therapist': 'massage_therapist',
+  'Nutritionist':      'nutritionist',
+  'Other':             'other',
+}
+const DB_TO_ROLE = {
+  'personal_trainer':  'Personal Trainer',
+  'physiotherapist':   'Physiotherapist',
+  'chiropractor':      'Chiropractor',
+  'massage_therapist': 'Massage Therapist',
+  'nutritionist':      'Nutritionist',
+  'other':             'Other',
+}
+
+function bioPlaceholder(roles) {
+  if (roles.includes('Personal Trainer'))  return 'Personal Trainer specialising in...'
+  if (roles.includes('Physiotherapist'))   return 'Physiotherapist helping clients recover and move better...'
+  if (roles.includes('Chiropractor'))      return 'Chiropractor specialising in...'
+  if (roles.includes('Massage Therapist')) return 'Massage Therapist helping clients with...'
+  if (roles.includes('Nutritionist'))      return 'Nutritionist helping clients achieve their health goals...'
+  return 'Tell clients about your background and specialisations...'
+}
 
 // ── Reusable helpers ──────────────────────────────────────────────────────────
 
@@ -48,19 +77,58 @@ function SectionHeader({ icon: Icon, title, desc, action }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Settings({ sessionTypes, setSessionTypes, onNavigate }) {
+  const { user, trainer, refreshTrainer } = useAuth()
 
   // §1 Account & Profile
-  const [profile, setProfile] = useState({
-    name: 'Alex Morgan',
-    email: 'alex@movewithme.com',
-    bio: 'Certified personal trainer with 8+ years experience specialising in strength & conditioning, rehabilitation, and sports performance.',
-  })
+  const [profile, setProfile] = useState({ name: '', email: '', bio: '' })
+  const [profileLoading, setProfileLoading] = useState(true)
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileSaved,  setProfileSaved]  = useState(false)
   const [photoPreview, setPhotoPreview] = useState(null)
   const photoInputRef = useRef(null)
 
   // §2 Professional Roles
   const ROLES = ['Personal Trainer', 'Physiotherapist', 'Chiropractor', 'Massage Therapist', 'Nutritionist', 'Other']
-  const [selectedRoles, setSelectedRoles] = useState(['Personal Trainer'])
+  const [selectedRoles, setSelectedRoles] = useState([])
+
+  // Fetch trainer profile + roles on mount
+  useEffect(() => {
+    if (!user) return
+    async function load() {
+      setProfileLoading(true)
+      const { data: roleRows } = await supabase
+        .from('trainer_roles')
+        .select('role_type')
+        .eq('trainer_id', user.id)
+
+      const dbRoles = (roleRows ?? []).map(r => DB_TO_ROLE[r.role_type]).filter(Boolean)
+      setSelectedRoles(dbRoles)
+      setProfile({
+        name:  trainer?.full_name ?? '',
+        email: user.email ?? '',
+        bio:   trainer?.bio ?? '',
+      })
+      setProfileLoading(false)
+    }
+    load()
+  }, [user, trainer])
+
+  async function saveProfile() {
+    if (!user) return
+    setProfileSaving(true)
+    try {
+      await updateTrainerProfile(user.id, {
+        fullName: profile.name,
+        bio:      profile.bio,
+      })
+      await upsertTrainerRoles(user.id, selectedRoles.map(r => ROLE_TO_DB[r] ?? 'other'))
+      await refreshTrainer()
+      setProfileSaved(true)
+      setTimeout(() => setProfileSaved(false), 2500)
+    } finally {
+      setProfileSaving(false)
+    }
+  }
 
   // §3 Session Types — editing state (data lives in App via props)
   const [editingId, setEditingId]   = useState(null)
@@ -174,46 +242,53 @@ export default function Settings({ sessionTypes, setSessionTypes, onNavigate }) 
         <SectionHeader icon={User} title="Account & Profile"
           desc="Your name, photo and bio appear on your trainer profile visible to clients." />
 
-        <div className="s-profile-layout">
-          <div className="s-avatar-wrap">
-            <div className="s-avatar" onClick={() => photoInputRef.current?.click()}>
-              {photoPreview
-                ? <img src={photoPreview} alt="Profile" className="s-avatar-img" />
-                : <span className="s-avatar-initials">
-                    {profile.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                  </span>
-              }
-              <div className="s-avatar-overlay"><Camera size={20} /></div>
+        {profileLoading ? (
+          <p className="s-label-hint">Loading…</p>
+        ) : (
+          <div className="s-profile-layout">
+            <div className="s-avatar-wrap">
+              <div className="s-avatar" onClick={() => photoInputRef.current?.click()}>
+                {photoPreview
+                  ? <img src={photoPreview} alt="Profile" className="s-avatar-img" />
+                  : <span className="s-avatar-initials">
+                      {profile.name
+                        ? profile.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+                        : '?'}
+                    </span>
+                }
+                <div className="s-avatar-overlay"><Camera size={20} /></div>
+              </div>
+              <input ref={photoInputRef} type="file" accept="image/*"
+                className="s-hidden-input" onChange={handlePhotoChange} />
+              <button className="s-avatar-btn" onClick={() => photoInputRef.current?.click()}>
+                Upload photo
+              </button>
             </div>
-            <input ref={photoInputRef} type="file" accept="image/*"
-              className="s-hidden-input" onChange={handlePhotoChange} />
-            <button className="s-avatar-btn" onClick={() => photoInputRef.current?.click()}>
-              Upload photo
-            </button>
-          </div>
 
-          <div className="s-profile-fields">
-            <div className="s-field-row">
-              <div className="s-field">
-                <label className="s-label">Full name</label>
-                <input className="s-input" value={profile.name}
-                  onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} />
+            <div className="s-profile-fields">
+              <div className="s-field-row">
+                <div className="s-field">
+                  <label className="s-label">Full name</label>
+                  <input className="s-input" value={profile.name}
+                    onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} />
+                </div>
+                <div className="s-field">
+                  <label className="s-label">Email</label>
+                  <input className="s-input" type="email" value={profile.email} readOnly
+                    style={{ opacity: 0.6, cursor: 'default' }} />
+                </div>
               </div>
               <div className="s-field">
-                <label className="s-label">Email</label>
-                <input className="s-input" type="email" value={profile.email}
-                  onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} />
+                <label className="s-label">
+                  Bio / About me <span className="s-label-hint">— visible to clients</span>
+                </label>
+                <textarea className="s-textarea" rows={3} value={profile.bio}
+                  placeholder={bioPlaceholder(selectedRoles)}
+                  onChange={e => setProfile(p => ({ ...p, bio: e.target.value }))} />
               </div>
-            </div>
-            <div className="s-field">
-              <label className="s-label">
-                Bio / About me <span className="s-label-hint">— visible to clients</span>
-              </label>
-              <textarea className="s-textarea" rows={3} value={profile.bio}
-                onChange={e => setProfile(p => ({ ...p, bio: e.target.value }))} />
             </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* ── §2 Professional Roles ─────────────────────────────────────────────── */}
@@ -232,6 +307,13 @@ export default function Settings({ sessionTypes, setSessionTypes, onNavigate }) 
               {role}
             </button>
           ))}
+        </div>
+        <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button className="settings-add-btn" style={{ padding: '8px 18px' }}
+            onClick={saveProfile} disabled={profileSaving || profileLoading}>
+            {profileSaving ? 'Saving…' : profileSaved ? <><Check size={13} /> Saved</> : 'Save changes'}
+          </button>
+          {profileSaved && <span className="s-label-hint">Profile updated.</span>}
         </div>
       </section>
 
